@@ -1,0 +1,481 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .dashboard-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .dashboard-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    
+    .activity-item {
+        transition: all 0.2s ease;
+    }
+    
+    .activity-item:hover {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 8px;
+    }
+    
+    .progress-ring {
+        transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+        transition: stroke-dashoffset 0.35s;
+        transform-origin: 50% 50%;
+    }
+    
+    .quick-action {
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action:hover {
+        transform: translateY(-2px) scale(1.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        Welcome back, {{ user.first_name|default:user.username }}! 👋
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Here's what's happening with your AI API keys today
+                    </p>
+                </div>
+                <div class="mt-4 sm:mt-0">
+                    <div class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-clock"></i>
+                        <span>Last updated: {% now "M d, Y H:i" %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total API Keys -->
+            <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total API Keys</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_api_keys }}</p>
+                        <p class="text-sm text-green-600 dark:text-green-400">
+                            <i class="fas fa-arrow-up mr-1"></i>
+                            {{ active_keys }} active
+                        </p>
+                    </div>
+                    <div class="stat-icon bg-gradient-to-r from-blue-500 to-blue-600">
+                        <i class="fas fa-key"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Total Usage -->
+            <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Usage</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_usage }}</p>
+                        <p class="text-sm text-blue-600 dark:text-blue-400">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            This month
+                        </p>
+                    </div>
+                    <div class="stat-icon bg-gradient-to-r from-green-500 to-green-600">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Sessions -->
+            <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Chat Sessions</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_chat_sessions }}</p>
+                        <p class="text-sm text-purple-600 dark:text-purple-400">
+                            <i class="fas fa-comments mr-1"></i>
+                            {{ active_sessions }} active
+                        </p>
+                    </div>
+                    <div class="stat-icon bg-gradient-to-r from-purple-500 to-purple-600">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Rate -->
+            <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Error Rate</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ error_rate }}%</p>
+                        <p class="text-sm {{ error_rate|floatformat:1|add:'0' <= 5 }}text-green-600 dark:text-green-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                            <i class="fas fa-{{ error_rate|floatformat:1|add:'0' <= 5 }}check{% else %}exclamation-triangle{% endif %} mr-1"></i>
+                            Last 24h
+                        </p>
+                    </div>
+                    <div class="stat-icon bg-gradient-to-r from-red-500 to-red-600">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Usage Chart -->
+                <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                            Usage Analytics
+                        </h2>
+                        <div class="flex space-x-2">
+                            <button onclick="changeChartPeriod('7d')" class="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg">
+                                7D
+                            </button>
+                            <button onclick="changeChartPeriod('30d')" class="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                30D
+                            </button>
+                            <button onclick="changeChartPeriod('90d')" class="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                90D
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="usageChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recent API Keys -->
+                <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-key mr-2 text-green-500"></i>
+                            Recent API Keys
+                        </h2>
+                        <a href="{% url 'api_key_list' %}" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+                            View All <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                    
+                    {% if recent_api_keys %}
+                        <div class="space-y-4">
+                            {% for api_key in recent_api_keys %}
+                                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                            {% if 'openai' in api_key.provider.name|lower %}
+                                                <i class="fas fa-brain text-white"></i>
+                                            {% elif 'gemini' in api_key.provider.name|lower %}
+                                                <i class="fas fa-gem text-white"></i>
+                                            {% elif 'groq' in api_key.provider.name|lower %}
+                                                <i class="fas fa-bolt text-white"></i>
+                                            {% else %}
+                                                <i class="fas fa-cog text-white"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h3 class="font-medium text-gray-900 dark:text-white">{{ api_key.key_name }}</h3>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ api_key.provider.name }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-3">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                            {% if api_key.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                            {% elif api_key.status == 'testing' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                            {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                                            {{ api_key.get_status_display }}
+                                        </span>
+                                        <a href="{% url 'api_key_update' api_key.pk %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-key text-2xl text-gray-400"></i>
+                            </div>
+                            <p class="text-gray-500 dark:text-gray-400 mb-4">No API keys yet</p>
+                            <a href="{% url 'api_key_create' %}" class="btn-primary px-4 py-2 rounded-lg text-sm">
+                                Add Your First API Key
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="space-y-8">
+                <!-- Quick Actions -->
+                <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+                        Quick Actions
+                    </h2>
+                    
+                    <div class="space-y-3">
+                        <a href="{% url 'api_key_create' %}" class="quick-action block p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-lg hover:shadow-md">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-plus text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-blue-900 dark:text-blue-100">Add API Key</h3>
+                                    <p class="text-sm text-blue-600 dark:text-blue-300">Connect a new provider</p>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="{% url 'new_chat_session' %}" class="quick-action block p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-lg hover:shadow-md">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-comments text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-green-900 dark:text-green-100">New Chat</h3>
+                                    <p class="text-sm text-green-600 dark:text-green-300">Start testing your APIs</p>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="{% url 'analytics' %}" class="quick-action block p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 rounded-lg hover:shadow-md">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-chart-pie text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-purple-900 dark:text-purple-100">View Analytics</h3>
+                                    <p class="text-sm text-purple-600 dark:text-purple-300">Detailed insights</p>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <a href="{% url 'health_check' %}" class="quick-action block p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-lg hover:shadow-md">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-heartbeat text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-orange-900 dark:text-orange-100">Health Check</h3>
+                                    <p class="text-sm text-orange-600 dark:text-orange-300">System status</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-history mr-2 text-indigo-500"></i>
+                        Recent Activity
+                    </h2>
+                    
+                    {% if recent_activities %}
+                        <div class="space-y-4">
+                            {% for activity in recent_activities %}
+                                <div class="activity-item flex items-start space-x-3 p-2 -m-2">
+                                    <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-{{ activity.icon }} text-xs text-gray-600 dark:text-gray-400"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm text-gray-900 dark:text-white">{{ activity.description }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ activity.timestamp|timesince }} ago</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-6">
+                            <div class="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-history text-gray-400"></i>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- System Health -->
+                <div class="dashboard-card rounded-xl p-6 shadow-sm">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-heartbeat mr-2 text-red-500"></i>
+                        System Health
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <!-- API Health -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">API Services</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Operational</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Database Health -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Database</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Healthy</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Response Time -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Avg Response</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ avg_response_time|default:"<50" }}ms</span>
+                        </div>
+                        
+                        <!-- Uptime -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Uptime</span>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">99.9%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <a href="{% url 'health_check' %}" class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                            View Detailed Status <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Usage Chart
+    const ctx = document.getElementById('usageChart').getContext('2d');
+    const usageChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'API Calls',
+                data: {{ chart_data|safe }},
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+    
+    // Change chart period
+    function changeChartPeriod(period) {
+        // Remove active class from all buttons
+        document.querySelectorAll('[onclick^="changeChartPeriod"]').forEach(btn => {
+            btn.className = 'px-3 py-1 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700';
+        });
+        
+        // Add active class to clicked button
+        event.target.className = 'px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg';
+        
+        // Here you would typically fetch new data and update the chart
+        // For now, we'll just show a loading state
+        console.log('Changing chart period to:', period);
+    }
+    
+    // Auto-refresh dashboard data every 5 minutes
+    setInterval(() => {
+        // You can implement auto-refresh logic here
+        console.log('Auto-refreshing dashboard data...');
+    }, 300000); // 5 minutes
+    
+    // Add some interactivity to quick actions
+    document.querySelectorAll('.quick-action').forEach(action => {
+        action.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.02)';
+        });
+        
+        action.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+</script>
+{% endblock %}

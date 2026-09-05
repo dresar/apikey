@@ -1,0 +1,814 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Health Check - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .health-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .health-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .health-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .health-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        position: relative;
+        display: inline-block;
+    }
+    
+    .status-healthy {
+        background: #10B981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-warning {
+        background: #F59E0B;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+    
+    .status-critical {
+        background: #EF4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+    
+    .status-unknown {
+        background: #6B7280;
+        box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.2);
+    }
+    
+    .status-indicator.pulse::before {
+        content: '';
+        position: absolute;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+        border-radius: 50%;
+        background: inherit;
+        animation: pulse 2s infinite;
+        opacity: 0.6;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.6;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.3;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 0.6;
+        }
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .metric-card {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+    }
+    
+    .service-item {
+        transition: all 0.2s ease;
+    }
+    
+    .service-item:hover {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.5rem;
+    }
+    
+    .dark .service-item:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .response-time-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: #E5E7EB;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .dark .response-time-bar {
+        background: #374151;
+    }
+    
+    .response-time-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+    
+    .uptime-ring {
+        transform: rotate(-90deg);
+    }
+    
+    .uptime-circle {
+        transition: stroke-dashoffset 0.35s;
+        transform-origin: 50% 50%;
+    }
+    
+    .log-entry {
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .log-entry.info {
+        border-left-color: #3B82F6;
+    }
+    
+    .log-entry.warning {
+        border-left-color: #F59E0B;
+    }
+    
+    .log-entry.error {
+        border-left-color: #EF4444;
+    }
+    
+    .log-entry.success {
+        border-left-color: #10B981;
+    }
+    
+    .refresh-button {
+        transition: transform 0.3s ease;
+    }
+    
+    .refresh-button.spinning {
+        transform: rotate(360deg);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 200px;
+    }
+    
+    .provider-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .provider-status {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        <i class="fas fa-heartbeat mr-3 text-green-500"></i>
+                        System Health
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Monitor system status and performance metrics
+                    </p>
+                </div>
+                
+                <div class="mt-4 sm:mt-0 flex space-x-3">
+                    <button onclick="exportHealthReport()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Report
+                    </button>
+                    <button onclick="refreshHealth()" class="btn-primary px-4 py-2 rounded-lg text-sm" id="refreshBtn">
+                        <i class="fas fa-sync-alt mr-2 refresh-button"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Overall Status -->
+        <div class="health-card rounded-xl p-6 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-4">
+                    <div class="status-indicator status-healthy pulse"></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">All Systems Operational</h2>
+                        <p class="text-gray-600 dark:text-gray-400">Last updated: {{ last_updated|default:"Just now" }}</p>
+                    </div>
+                </div>
+                
+                <div class="text-right">
+                    <div class="text-3xl font-bold text-green-500">99.9%</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Uptime</div>
+                </div>
+            </div>
+            
+            <!-- Quick Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 metrics-grid">
+                <div class="metric-card rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-server text-blue-600 dark:text-blue-400 text-sm"></i>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 rounded-full">
+                            Online
+                        </span>
+                    </div>
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">5/5</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Services</div>
+                </div>
+                
+                <div class="metric-card rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-green-600 dark:text-green-400 text-sm"></i>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 rounded-full">
+                            Good
+                        </span>
+                    </div>
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">1.2s</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Avg Response</div>
+                </div>
+                
+                <div class="metric-card rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-database text-purple-600 dark:text-purple-400 text-sm"></i>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 rounded-full">
+                            Healthy
+                        </span>
+                    </div>
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">45%</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">DB Usage</div>
+                </div>
+                
+                <div class="metric-card rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400 text-sm"></i>
+                        </div>
+                        <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 rounded-full">
+                            0
+                        </span>
+                    </div>
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Active Issues</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Service Status Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- API Services -->
+            <div class="health-card rounded-xl p-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-cloud mr-2 text-blue-500"></i>
+                    API Services
+                </h3>
+                
+                <div class="provider-status">
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-robot text-green-600 dark:text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">OpenAI</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">GPT Models</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Operational</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Response Time:</span>
+                                <span class="text-gray-900 dark:text-white font-medium">850ms</span>
+                            </div>
+                            <div class="response-time-bar">
+                                <div class="response-time-fill bg-green-500" style="width: 85%"></div>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Success Rate:</span>
+                                <span class="text-green-600 dark:text-green-400 font-medium">99.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-gem text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Google Gemini</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Gemini Pro</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Operational</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Response Time:</span>
+                                <span class="text-gray-900 dark:text-white font-medium">1.1s</span>
+                            </div>
+                            <div class="response-time-bar">
+                                <div class="response-time-fill bg-green-500" style="width: 75%"></div>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Success Rate:</span>
+                                <span class="text-green-600 dark:text-green-400 font-medium">98.8%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-bolt text-purple-600 dark:text-purple-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Groq</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">LLaMA Models</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-warning"></div>
+                                <span class="text-sm font-medium text-yellow-600 dark:text-yellow-400">Degraded</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Response Time:</span>
+                                <span class="text-gray-900 dark:text-white font-medium">2.3s</span>
+                            </div>
+                            <div class="response-time-bar">
+                                <div class="response-time-fill bg-yellow-500" style="width: 45%"></div>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Success Rate:</span>
+                                <span class="text-yellow-600 dark:text-yellow-400 font-medium">95.1%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-brain text-orange-600 dark:text-orange-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Anthropic</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Claude Models</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Operational</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Response Time:</span>
+                                <span class="text-gray-900 dark:text-white font-medium">950ms</span>
+                            </div>
+                            <div class="response-time-bar">
+                                <div class="response-time-fill bg-green-500" style="width: 80%"></div>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600 dark:text-gray-400">Success Rate:</span>
+                                <span class="text-green-600 dark:text-green-400 font-medium">99.5%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Components -->
+            <div class="health-card rounded-xl p-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-server mr-2 text-blue-500"></i>
+                    System Components
+                </h3>
+                
+                <div class="space-y-4">
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-database text-green-600 dark:text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Database</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">PostgreSQL 14.2</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Healthy</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Connections:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">45/100</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Query Time:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">12ms</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-memory text-blue-600 dark:text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Redis Cache</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Redis 7.0</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Healthy</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Memory:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">2.1GB/4GB</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Hit Rate:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">94.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-tasks text-purple-600 dark:text-purple-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Task Queue</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Celery Workers</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Healthy</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Workers:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">4/4</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Queue:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">3 jobs</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="service-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-hdd text-orange-600 dark:text-orange-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">File Storage</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Local Storage</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="status-indicator status-healthy"></div>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">Healthy</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Used:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">45GB/100GB</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600 dark:text-gray-400">Free:</span>
+                                <span class="text-gray-900 dark:text-white font-medium ml-2">55GB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Response Time Chart -->
+            <div class="health-card rounded-xl p-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                    Response Time Trends
+                </h3>
+                
+                <div class="chart-container">
+                    <canvas id="responseTimeChart"></canvas>
+                </div>
+                
+                <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-lg font-bold text-gray-900 dark:text-white">1.2s</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Average</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-green-600 dark:text-green-400">0.8s</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Best</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-red-600 dark:text-red-400">3.2s</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Worst</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Uptime Chart -->
+            <div class="health-card rounded-xl p-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-clock mr-2 text-blue-500"></i>
+                    Uptime Overview
+                </h3>
+                
+                <div class="flex items-center justify-center mb-6">
+                    <div class="relative">
+                        <svg class="uptime-ring w-32 h-32">
+                            <circle cx="64" cy="64" r="56" stroke="#E5E7EB" stroke-width="8" fill="none" class="dark:stroke-gray-700"></circle>
+                            <circle cx="64" cy="64" r="56" stroke="#10B981" stroke-width="8" fill="none" 
+                                    class="uptime-circle" 
+                                    stroke-dasharray="351.86" 
+                                    stroke-dashoffset="3.52"
+                                    stroke-linecap="round"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-gray-900 dark:text-white">99.9%</div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Uptime</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Last 24 hours:</span>
+                        <span class="text-green-600 dark:text-green-400 font-medium">100%</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Last 7 days:</span>
+                        <span class="text-green-600 dark:text-green-400 font-medium">99.8%</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Last 30 days:</span>
+                        <span class="text-green-600 dark:text-green-400 font-medium">99.9%</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Last downtime:</span>
+                        <span class="text-gray-900 dark:text-white font-medium">3 days ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Events -->
+        <div class="health-card rounded-xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                <i class="fas fa-list mr-2 text-blue-500"></i>
+                Recent Events
+            </h3>
+            
+            <div class="space-y-4">
+                <div class="log-entry success p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-check text-green-600 dark:text-green-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-medium text-gray-900 dark:text-white">All services operational</h4>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">2 minutes ago</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                System health check completed successfully. All services are running normally.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="log-entry warning p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-medium text-gray-900 dark:text-white">Groq API experiencing delays</h4>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">15 minutes ago</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Groq API response times are higher than normal. Monitoring the situation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="log-entry info p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-info text-blue-600 dark:text-blue-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-medium text-gray-900 dark:text-white">Database maintenance completed</h4>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">2 hours ago</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Scheduled database maintenance completed successfully. Performance optimizations applied.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="log-entry success p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-sync text-green-600 dark:text-green-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-medium text-gray-900 dark:text-white">System update deployed</h4>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">6 hours ago</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Version 2.1.3 deployed successfully with bug fixes and performance improvements.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <button class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                    <i class="fas fa-history mr-2"></i>
+                    View Full Event Log
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Initialize response time chart
+    function initResponseTimeChart() {
+        const ctx = document.getElementById('responseTimeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+                datasets: [{
+                    label: 'Response Time (ms)',
+                    data: [1200, 1100, 1300, 1150, 1250, 1180, 1200],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 4,
+                        hoverRadius: 6
+                    }
+                }
+            }
+        });
+    }
+    
+    // Refresh health data
+    function refreshHealth() {
+        const refreshBtn = document.getElementById('refreshBtn');
+        const refreshIcon = refreshBtn.querySelector('.refresh-button');
+        
+        refreshIcon.classList.add('spinning');
+        refreshBtn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            refreshIcon.classList.remove('spinning');
+            refreshBtn.disabled = false;
+            
+            // Update last updated time
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            document.querySelector('p:contains("Last updated")').textContent = `Last updated: ${timeString}`;
+        }, 2000);
+    }
+    
+    // Export health report
+    function exportHealthReport() {
+        // Implement export functionality
+        alert('Health report export initiated!');
+    }
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        // You can implement auto-refresh logic here
+        console.log('Auto-refreshing health data...');
+    }, 30000);
+    
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initResponseTimeChart();
+    });
+</script>
+{% endblock %}

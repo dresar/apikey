@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}API Keys - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .api-key-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .api-key-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .api-key-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .api-key-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .status-badge {
+        @apply px-3 py-1 rounded-full text-xs font-semibold;
+    }
+    
+    .status-active {
+        @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    }
+    
+    .status-testing {
+        @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+    }
+    
+    .status-expired {
+        @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    }
+    
+    .status-revoked {
+        @apply bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200;
+    }
+    
+    .provider-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .openai { background: linear-gradient(135deg, #10a37f, #1a7f64); }
+    .gemini { background: linear-gradient(135deg, #4285f4, #34a853); }
+    .groq { background: linear-gradient(135deg, #ff6b35, #f7931e); }
+    .anthropic { background: linear-gradient(135deg, #d4a574, #b8956a); }
+    .cohere { background: linear-gradient(135deg, #39c5bb, #2d9cdb); }
+    .default { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        <i class="fas fa-key mr-3 text-blue-500"></i>
+                        API Keys Management
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Kelola dan monitor API keys dari berbagai provider AI
+                    </p>
+                </div>
+                <div class="mt-4 sm:mt-0 flex space-x-3">
+                    <a href="{% url 'api_key_create' %}" class="btn-primary px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-plus mr-2"></i>
+                        Add New API Key
+                    </a>
+                    <button onclick="bulkTestKeys()" class="btn-secondary px-6 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-vial mr-2"></i>
+                        Bulk Test
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <i class="fas fa-key text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Keys</p>
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ api_keys.count }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+                        <i class="fas fa-check-circle text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Keys</p>
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ active_count }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div class="flex items-center">
+                    <div class="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                        <i class="fas fa-flask text-yellow-600 dark:text-yellow-400"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Testing</p>
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ testing_count }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+                <div class="flex items-center">
+                    <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                        <i class="fas fa-chart-line text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Usage</p>
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ total_usage }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filter and Search -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 mb-8 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search API keys..." 
+                               class="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-4">
+                    <select id="providerFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">All Providers</option>
+                        {% for provider in providers %}
+                            <option value="{{ provider.name }}">{{ provider.name }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <select id="statusFilter" class="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="testing">Testing</option>
+                        <option value="expired">Expired</option>
+                        <option value="revoked">Revoked</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Keys Grid -->
+        {% if api_keys %}
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6" id="apiKeysGrid">
+                {% for api_key in api_keys %}
+                    <div class="api-key-card rounded-xl p-6 shadow-sm" 
+                         data-provider="{{ api_key.provider.name }}" 
+                         data-status="{{ api_key.status }}" 
+                         data-name="{{ api_key.key_name|lower }}">
+                        
+                        <!-- Header -->
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="provider-icon {{ api_key.provider.name|lower|default:'default' }}">
+                                    {% if 'openai' in api_key.provider.name|lower %}
+                                        <i class="fas fa-brain"></i>
+                                    {% elif 'gemini' in api_key.provider.name|lower %}
+                                        <i class="fas fa-gem"></i>
+                                    {% elif 'groq' in api_key.provider.name|lower %}
+                                        <i class="fas fa-bolt"></i>
+                                    {% elif 'anthropic' in api_key.provider.name|lower %}
+                                        <i class="fas fa-robot"></i>
+                                    {% elif 'cohere' in api_key.provider.name|lower %}
+                                        <i class="fas fa-comments"></i>
+                                    {% else %}
+                                        <i class="fas fa-cog"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 dark:text-white">{{ api_key.key_name }}</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ api_key.provider.name }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <span class="status-badge status-{{ api_key.status }}">
+                                    {{ api_key.get_status_display }}
+                                </span>
+                                
+                                <!-- Dropdown Menu -->
+                                <div class="relative" x-data="{ open: false }">
+                                    <button @click="open = !open" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    
+                                    <div x-show="open" @click.away="open = false" 
+                                         class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                                        <a href="{% url 'api_key_update' api_key.pk %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <i class="fas fa-edit mr-2"></i>Edit
+                                        </a>
+                                        <a href="{% url 'test_api_key' api_key.pk %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <i class="fas fa-vial mr-2"></i>Test
+                                        </a>
+                                        <a href="{% url 'api_test_history' api_key.pk %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <i class="fas fa-history mr-2"></i>History
+                                        </a>
+                                        <hr class="my-1 border-gray-200 dark:border-gray-700">
+                                        <a href="{% url 'api_key_delete' api_key.pk %}" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900">
+                                            <i class="fas fa-trash mr-2"></i>Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Key Info -->
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">API Key</span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-mono text-gray-900 dark:text-white" id="key-{{ api_key.pk }}">
+                                        {{ api_key.key_value|slice:":8" }}••••••••
+                                    </span>
+                                    <button onclick="toggleKeyVisibility({{ api_key.pk }}, '{{ api_key.key_value }}')"
+                                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                        <i class="fas fa-eye" id="eye-{{ api_key.pk }}"></i>
+                                    </button>
+                                    <button onclick="copyToClipboard('{{ api_key.key_value }}')"
+                                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">Usage Count</span>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ api_key.usage_count }}</span>
+                            </div>
+                            
+                            {% if api_key.last_tested %}
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-500 dark:text-gray-400">Last Tested</span>
+                                    <span class="text-sm text-gray-900 dark:text-white">{{ api_key.last_tested|timesince }} ago</span>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">Created</span>
+                                <span class="text-sm text-gray-900 dark:text-white">{{ api_key.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Notes -->
+                        {% if api_key.notes %}
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ api_key.notes|truncatewords:15 }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Actions -->
+                        <div class="flex space-x-2">
+                            <button onclick="testApiKey({{ api_key.pk }})" 
+                                    class="flex-1 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors duration-200">
+                                <i class="fas fa-vial mr-1"></i>Test
+                            </button>
+                            <a href="{% url 'api_key_update' api_key.pk %}" 
+                               class="flex-1 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 text-center">
+                                <i class="fas fa-edit mr-1"></i>Edit
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="mt-8 flex justify-center">
+                    <nav class="flex items-center space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page=1" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        <span class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                            <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-key text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No API Keys Found</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Get started by adding your first API key</p>
+                <a href="{% url 'api_key_create' %}" class="btn-primary px-6 py-3 rounded-lg font-semibold">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add Your First API Key
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4">
+        <div class="flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span class="text-gray-900 dark:text-white">Testing API Key...</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search and Filter functionality
+    function filterApiKeys() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const providerFilter = document.getElementById('providerFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        const cards = document.querySelectorAll('#apiKeysGrid .api-key-card');
+        
+        cards.forEach(card => {
+            const name = card.dataset.name;
+            const provider = card.dataset.provider;
+            const status = card.dataset.status;
+            
+            const matchesSearch = name.includes(searchTerm);
+            const matchesProvider = !providerFilter || provider === providerFilter;
+            const matchesStatus = !statusFilter || status === statusFilter;
+            
+            if (matchesSearch && matchesProvider && matchesStatus) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    document.getElementById('searchInput').addEventListener('input', filterApiKeys);
+    document.getElementById('providerFilter').addEventListener('change', filterApiKeys);
+    document.getElementById('statusFilter').addEventListener('change', filterApiKeys);
+    
+    // Toggle API key visibility
+    function toggleKeyVisibility(keyId, fullKey) {
+        const keyElement = document.getElementById(`key-${keyId}`);
+        const eyeElement = document.getElementById(`eye-${keyId}`);
+        
+        if (keyElement.textContent.includes('••••')) {
+            keyElement.textContent = fullKey;
+            eyeElement.className = 'fas fa-eye-slash';
+        } else {
+            keyElement.textContent = fullKey.slice(0, 8) + '••••••••';
+            eyeElement.className = 'fas fa-eye';
+        }
+    }
+    
+    // Copy to clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showNotification('API key copied to clipboard!', 'success');
+        }).catch(() => {
+            showNotification('Failed to copy API key', 'error');
+        });
+    }
+    
+    // Test API key
+    function testApiKey(keyId) {
+        document.getElementById('loadingModal').classList.remove('hidden');
+        document.getElementById('loadingModal').classList.add('flex');
+        
+        fetch(`/api-keys/${keyId}/test/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingModal').classList.add('hidden');
+            document.getElementById('loadingModal').classList.remove('flex');
+            
+            if (data.success) {
+                showNotification('API key test successful!', 'success');
+                location.reload();
+            } else {
+                showNotification(data.error || 'API key test failed', 'error');
+            }
+        })
+        .catch(error => {
+            document.getElementById('loadingModal').classList.add('hidden');
+            document.getElementById('loadingModal').classList.remove('flex');
+            showNotification('Error testing API key', 'error');
+        });
+    }
+    
+    // Bulk test API keys
+    function bulkTestKeys() {
+        if (confirm('Are you sure you want to test all API keys? This may take a while.')) {
+            document.getElementById('loadingModal').classList.remove('hidden');
+            document.getElementById('loadingModal').classList.add('flex');
+            
+            fetch('/api-keys/bulk-test/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loadingModal').classList.add('hidden');
+                document.getElementById('loadingModal').classList.remove('flex');
+                
+                if (data.success) {
+                    showNotification(`Bulk test completed: ${data.tested} keys tested`, 'success');
+                    location.reload();
+                } else {
+                    showNotification('Bulk test failed', 'error');
+                }
+            })
+            .catch(error => {
+                document.getElementById('loadingModal').classList.add('hidden');
+                document.getElementById('loadingModal').classList.remove('flex');
+                showNotification('Error during bulk test', 'error');
+            });
+        }
+    }
+    
+    // Notification function
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+            type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

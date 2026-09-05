@@ -1,0 +1,523 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chat Sessions - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .chat-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .chat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    .dark .chat-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .chat-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+        position: relative;
+    }
+    
+    .chat-status {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .dark .chat-status {
+        border-color: rgb(31, 41, 55);
+    }
+    
+    .message-preview {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .search-input {
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .filter-chip {
+        transition: all 0.2s ease;
+    }
+    
+    .filter-chip.active {
+        background: rgb(59, 130, 246);
+        color: white;
+    }
+    
+    .chat-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .chat-card:hover .chat-actions {
+        opacity: 1;
+    }
+    
+    .floating-action {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 50;
+        transition: all 0.3s ease;
+    }
+    
+    .floating-action:hover {
+        transform: scale(1.1);
+    }
+    
+    .empty-state {
+        animation: fadeInUp 0.6s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .chat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .chat-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        <i class="fas fa-comments mr-3 text-blue-500"></i>
+                        Chat Sessions
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Manage and review your AI conversations
+                    </p>
+                </div>
+                
+                <div class="mt-4 sm:mt-0 flex space-x-3">
+                    <button onclick="bulkDelete()" class="btn-secondary px-4 py-2 rounded-lg text-sm" id="bulkDeleteBtn" style="display: none;">
+                        <i class="fas fa-trash mr-2"></i>
+                        Delete Selected
+                    </button>
+                    <a href="{% url 'new_chat_session' %}" class="btn-primary px-6 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-plus mr-2"></i>
+                        New Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search and Filters -->
+        <div class="mb-8">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-6">
+                <!-- Search -->
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" 
+                               id="searchInput"
+                               class="search-input block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Search chat sessions..."
+                               onkeyup="filterChats()">
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="filterByStatus('all')" class="filter-chip active px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        All
+                    </button>
+                    <button onclick="filterByStatus('active')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Active
+                    </button>
+                    <button onclick="filterByStatus('completed')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Completed
+                    </button>
+                    <button onclick="filterByProvider('openai')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        OpenAI
+                    </button>
+                    <button onclick="filterByProvider('gemini')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Gemini
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="chat-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sessions</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_sessions|default:"24" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-white"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Chats</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ active_sessions|default:"8" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-circle text-white"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Messages</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_messages|default:"156" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-envelope text-white"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ avg_response_time|default:"1.2" }}s</p>
+                    </div>
+                    <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-clock text-white"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Sessions Grid -->
+        {% if chat_sessions %}
+            <div class="chat-grid" id="chatGrid">
+                {% for session in chat_sessions %}
+                    <div class="chat-card rounded-xl p-6 shadow-sm cursor-pointer" 
+                         data-session-id="{{ session.id }}"
+                         data-status="{{ session.status|default:'active' }}"
+                         data-provider="{{ session.api_key.provider.name|lower }}"
+                         onclick="openChat({{ session.id }})">
+                        
+                        <!-- Header -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="chat-avatar bg-gradient-to-r 
+                                    {% if 'openai' in session.api_key.provider.name|lower %}from-green-500 to-green-600
+                                    {% elif 'gemini' in session.api_key.provider.name|lower %}from-blue-500 to-blue-600
+                                    {% elif 'groq' in session.api_key.provider.name|lower %}from-orange-500 to-orange-600
+                                    {% else %}from-purple-500 to-purple-600{% endif %}">
+                                    {% if 'openai' in session.api_key.provider.name|lower %}
+                                        <i class="fas fa-brain"></i>
+                                    {% elif 'gemini' in session.api_key.provider.name|lower %}
+                                        <i class="fas fa-gem"></i>
+                                    {% elif 'groq' in session.api_key.provider.name|lower %}
+                                        <i class="fas fa-bolt"></i>
+                                    {% else %}
+                                        <i class="fas fa-robot"></i>
+                                    {% endif %}
+                                    
+                                    <div class="chat-status 
+                                        {% if session.status == 'active' %}bg-green-500
+                                        {% elif session.status == 'completed' %}bg-gray-500
+                                        {% else %}bg-yellow-500{% endif %}"></div>
+                                </div>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-gray-900 dark:text-white truncate">
+                                        {{ session.title|default:"Untitled Chat" }}
+                                    </h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ session.api_key.provider.name }} • {{ session.ai_model.name|default:"Default Model" }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="chat-actions flex items-center space-x-2">
+                                <input type="checkbox" 
+                                       class="session-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                                       value="{{ session.id }}"
+                                       onclick="event.stopPropagation(); toggleBulkActions()">
+                                <button onclick="event.stopPropagation(); editSession({{ session.id }})" 
+                                        class="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteSession({{ session.id }})" 
+                                        class="text-gray-400 hover:text-red-500 dark:hover:text-red-400">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Last Message Preview -->
+                        {% if session.last_message %}
+                            <div class="mb-4">
+                                <div class="message-preview text-sm text-gray-600 dark:text-gray-400">
+                                    <strong>{{ session.last_message.role|title }}:</strong> {{ session.last_message.content|truncatechars:100 }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Footer -->
+                        <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                            <div class="flex items-center space-x-4">
+                                <span>
+                                    <i class="fas fa-message mr-1"></i>
+                                    {{ session.message_count|default:0 }} messages
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ session.updated_at|timesince }} ago
+                                </span>
+                            </div>
+                            
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                {% if session.status == 'active' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                {% elif session.status == 'completed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
+                                {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
+                                {{ session.get_status_display|default:"Active" }}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="mt-8 flex justify-center">
+                    <nav class="flex items-center space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" 
+                               class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <span class="px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg">{{ num }}</span>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <a href="?page={{ num }}" 
+                                   class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" 
+                               class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Empty State -->
+            <div class="empty-state text-center py-16">
+                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-comments text-4xl text-gray-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No chat sessions yet</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                    Start your first conversation with AI. Create a new chat session to begin testing your API keys.
+                </p>
+                <a href="{% url 'new_chat_session' %}" class="btn-primary px-6 py-3 rounded-lg text-sm font-medium">
+                    <i class="fas fa-plus mr-2"></i>
+                    Start Your First Chat
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Floating Action Button -->
+    <a href="{% url 'new_chat_session' %}" class="floating-action btn-primary w-14 h-14 rounded-full shadow-lg flex items-center justify-center">
+        <i class="fas fa-plus text-xl"></i>
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Open chat session
+    function openChat(sessionId) {
+        window.location.href = `/chat/${sessionId}/`;
+    }
+    
+    // Edit session
+    function editSession(sessionId) {
+        // You can implement edit functionality here
+        console.log('Edit session:', sessionId);
+    }
+    
+    // Delete session
+    function deleteSession(sessionId) {
+        if (confirm('Are you sure you want to delete this chat session?')) {
+            // Implement delete functionality
+            console.log('Delete session:', sessionId);
+        }
+    }
+    
+    // Filter chats by search
+    function filterChats() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const chatCards = document.querySelectorAll('.chat-card');
+        
+        chatCards.forEach(card => {
+            const title = card.querySelector('h3').textContent.toLowerCase();
+            const provider = card.dataset.provider;
+            
+            if (title.includes(searchTerm) || provider.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Filter by status
+    function filterByStatus(status) {
+        updateFilterButtons(event.target);
+        
+        const chatCards = document.querySelectorAll('.chat-card');
+        chatCards.forEach(card => {
+            if (status === 'all' || card.dataset.status === status) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Filter by provider
+    function filterByProvider(provider) {
+        updateFilterButtons(event.target);
+        
+        const chatCards = document.querySelectorAll('.chat-card');
+        chatCards.forEach(card => {
+            if (card.dataset.provider.includes(provider)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Update filter button states
+    function updateFilterButtons(activeButton) {
+        document.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        activeButton.classList.add('active');
+    }
+    
+    // Toggle bulk actions
+    function toggleBulkActions() {
+        const checkboxes = document.querySelectorAll('.session-checkbox:checked');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        
+        if (checkboxes.length > 0) {
+            bulkDeleteBtn.style.display = 'block';
+        } else {
+            bulkDeleteBtn.style.display = 'none';
+        }
+    }
+    
+    // Bulk delete
+    function bulkDelete() {
+        const checkboxes = document.querySelectorAll('.session-checkbox:checked');
+        const sessionIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (sessionIds.length > 0 && confirm(`Are you sure you want to delete ${sessionIds.length} chat sessions?`)) {
+            // Implement bulk delete functionality
+            console.log('Bulk delete sessions:', sessionIds);
+        }
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + N for new chat
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = '{% url "new_chat_session" %}';
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape') {
+            document.getElementById('searchInput').value = '';
+            filterChats();
+        }
+    });
+    
+    // Auto-save search state
+    document.getElementById('searchInput').addEventListener('input', function() {
+        localStorage.setItem('chatSearchTerm', this.value);
+    });
+    
+    // Restore search state
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedSearch = localStorage.getItem('chatSearchTerm');
+        if (savedSearch) {
+            document.getElementById('searchInput').value = savedSearch;
+            filterChats();
+        }
+    });
+</script>
+{% endblock %}

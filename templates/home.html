@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI API Platform - Home{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .feature-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .dark .feature-card {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .floating-shapes {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 0;
+    }
+    
+    .shape {
+        position: absolute;
+        border-radius: 50%;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .shape:nth-child(1) {
+        width: 80px;
+        height: 80px;
+        top: 20%;
+        left: 10%;
+        animation-delay: 0s;
+    }
+    
+    .shape:nth-child(2) {
+        width: 120px;
+        height: 120px;
+        top: 60%;
+        right: 10%;
+        animation-delay: 2s;
+    }
+    
+    .shape:nth-child(3) {
+        width: 60px;
+        height: 60px;
+        bottom: 20%;
+        left: 20%;
+        animation-delay: 4s;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    
+    .stats-counter {
+        font-size: 2.5rem;
+        font-weight: bold;
+        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center justify-center hero-gradient overflow-hidden">
+    <div class="floating-shapes">
+        <div class="shape"></div>
+        <div class="shape"></div>
+        <div class="shape"></div>
+    </div>
+    
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+        <div class="animate__animated animate__fadeInUp">
+            <h1 class="text-5xl md:text-7xl font-bold mb-6">
+                AI API Platform
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+                Kelola dan uji API key AI dari berbagai provider dalam satu platform terpadu. 
+                Streamline workflow pengembangan AI Anda dengan tools komprehensif kami.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-tachometer-alt mr-2"></i>
+                        Go to Dashboard
+                    </a>
+                    <a href="{% url 'api_key_list' %}" class="btn-secondary px-8 py-4 text-lg font-semibold rounded-xl transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-key mr-2"></i>
+                        Manage API Keys
+                    </a>
+                {% else %}
+                    <a href="{% url 'register' %}" class="btn-primary px-8 py-4 text-lg font-semibold rounded-xl transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-rocket mr-2"></i>
+                        Get Started Free
+                    </a>
+                    <a href="{% url 'login' %}" class="btn-secondary px-8 py-4 text-lg font-semibold rounded-xl transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Sign In
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <i class="fas fa-chevron-down text-2xl opacity-70"></i>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-20 bg-gray-50 dark:bg-gray-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Fitur Unggulan
+            </h2>
+            <p class="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                Platform lengkap untuk mengelola API key AI dengan fitur-fitur canggih
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-key text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Multi-Provider Support
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Dukung OpenAI, Gemini, Groq, Anthropic, Cohere, dan provider AI lainnya dalam satu platform
+                </p>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-vial text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    API Testing Suite
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Test dan validasi API key secara real-time dengan monitoring performa dan response time
+                </p>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-comments text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Interactive Chat
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Chat interface untuk testing model AI dengan dukungan file attachment dan session management
+                </p>
+            </div>
+            
+            <!-- Feature 4 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Analytics & Monitoring
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Dashboard analytics lengkap dengan tracking usage, error logs, dan performance metrics
+                </p>
+            </div>
+            
+            <!-- Feature 5 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-shield-alt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Secure & Private
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Enkripsi API key dan data user dengan standar keamanan tinggi
+                </p>
+            </div>
+            
+            <!-- Feature 6 -->
+            <div class="feature-card rounded-2xl p-8 text-center transform hover:scale-105 transition-all duration-300">
+                <div class="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-mobile-alt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Mobile Responsive
+                </h3>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Desain responsif yang optimal untuk semua perangkat, dari mobile hingga desktop
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-20 bg-white dark:bg-gray-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+            <div class="animate__animated animate__fadeInUp">
+                <div class="stats-counter" data-target="5">0</div>
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">AI Providers</p>
+            </div>
+            <div class="animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <div class="stats-counter" data-target="50">0</div>
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">AI Models</p>
+            </div>
+            <div class="animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <div class="stats-counter" data-target="99">0</div>
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">Uptime %</p>
+            </div>
+            <div class="animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+                <div class="stats-counter" data-target="24">0</div>
+                <p class="text-gray-600 dark:text-gray-400 text-lg font-medium">Support 24/7</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+        <h2 class="text-4xl font-bold mb-6">
+            Siap Memulai Perjalanan AI Anda?
+        </h2>
+        <p class="text-xl mb-8 opacity-90">
+            Bergabunglah dengan platform AI API terdepan dan tingkatkan produktivitas pengembangan AI Anda
+        </p>
+        
+        {% if not user.is_authenticated %}
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{% url 'register' %}" class="bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-300">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Daftar Gratis Sekarang
+                </a>
+                <a href="#features" class="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-blue-600 transform hover:scale-105 transition-all duration-300">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Pelajari Lebih Lanjut
+                </a>
+            </div>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 inline-block">
+                <i class="fas fa-arrow-right mr-2"></i>
+                Lanjutkan ke Dashboard
+            </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Counter animation
+    function animateCounters() {
+        const counters = document.querySelectorAll('.stats-counter');
+        
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-target'));
+            const duration = 2000; // 2 seconds
+            const step = target / (duration / 16); // 60fps
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    counter.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    counter.textContent = Math.floor(current);
+                }
+            }, 16);
+        });
+    }
+    
+    // Trigger counter animation when section is visible
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounters();
+                observer.unobserve(entry.target);
+            }
+        });
+    });
+    
+    const statsSection = document.querySelector('.stats-counter').closest('section');
+    if (statsSection) {
+        observer.observe(statsSection);
+    }
+    
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

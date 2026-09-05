@@ -1,0 +1,772 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ chat_session.title|default:"Chat Session" }} - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .dark .chat-header {
+        background: rgba(31, 41, 55, 0.95);
+        border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        scroll-behavior: smooth;
+    }
+    
+    .message {
+        margin-bottom: 1.5rem;
+        animation: fadeInUp 0.3s ease;
+    }
+    
+    .message-user {
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .message-assistant {
+        display: flex;
+        justify-content: flex-start;
+    }
+    
+    .message-content {
+        max-width: 70%;
+        padding: 1rem 1.25rem;
+        border-radius: 1.5rem;
+        position: relative;
+        word-wrap: break-word;
+    }
+    
+    .message-user .message-content {
+        background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+        color: white;
+        border-bottom-right-radius: 0.5rem;
+    }
+    
+    .message-assistant .message-content {
+        background: rgba(243, 244, 246, 0.8);
+        color: rgb(31, 41, 55);
+        border-bottom-left-radius: 0.5rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .dark .message-assistant .message-content {
+        background: rgba(55, 65, 81, 0.8);
+        color: rgb(243, 244, 246);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: white;
+        margin: 0 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .message-user .message-avatar {
+        background: linear-gradient(135deg, #10B981, #059669);
+        order: 2;
+    }
+    
+    .message-assistant .message-avatar {
+        background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 0.5rem;
+    }
+    
+    .message-assistant .message-time {
+        color: rgb(107, 114, 128);
+    }
+    
+    .dark .message-assistant .message-time {
+        color: rgb(156, 163, 175);
+    }
+    
+    .chat-input-container {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        position: sticky;
+        bottom: 0;
+    }
+    
+    .dark .chat-input-container {
+        background: rgba(31, 41, 55, 0.95);
+        border-top: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .chat-input {
+        resize: none;
+        min-height: 60px;
+        max-height: 120px;
+        transition: all 0.2s ease;
+    }
+    
+    .chat-input:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .send-button {
+        transition: all 0.2s ease;
+    }
+    
+    .send-button:hover {
+        transform: scale(1.05);
+    }
+    
+    .send-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .typing-indicator {
+        display: none;
+        align-items: center;
+        padding: 1rem;
+        color: rgb(107, 114, 128);
+    }
+    
+    .typing-dots {
+        display: flex;
+        align-items: center;
+        margin-left: 0.5rem;
+    }
+    
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgb(107, 114, 128);
+        margin: 0 2px;
+        animation: typingAnimation 1.4s infinite;
+    }
+    
+    .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+    
+    .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+    
+    @keyframes typingAnimation {
+        0%, 60%, 100% {
+            transform: translateY(0);
+            opacity: 0.5;
+        }
+        30% {
+            transform: translateY(-10px);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .attachment-preview {
+        max-width: 200px;
+        border-radius: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .code-block {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        font-family: 'Courier New', monospace;
+        overflow-x: auto;
+    }
+    
+    .dark .code-block {
+        background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .message-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        position: absolute;
+        top: -10px;
+        right: 10px;
+        background: white;
+        border-radius: 0.5rem;
+        padding: 0.25rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .message-actions {
+        background: rgb(55, 65, 81);
+    }
+    
+    .message:hover .message-actions {
+        opacity: 1;
+    }
+    
+    .sidebar {
+        width: 300px;
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border-left: 1px solid rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .dark .sidebar {
+        background: rgba(31, 41, 55, 0.9);
+        border-left: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .sidebar.hidden {
+        transform: translateX(100%);
+    }
+    
+    @media (max-width: 768px) {
+        .message-content {
+            max-width: 85%;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100vh;
+            z-index: 50;
+        }
+        
+        .chat-container {
+            height: calc(100vh - 120px);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="flex h-screen">
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div class="chat-header px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <a href="{% url 'chat_sessions' %}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-arrow-left text-xl"></i>
+                        </a>
+                        
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-r 
+                                {% if 'openai' in chat_session.api_key.provider.name|lower %}from-green-500 to-green-600
+                                {% elif 'gemini' in chat_session.api_key.provider.name|lower %}from-blue-500 to-blue-600
+                                {% elif 'groq' in chat_session.api_key.provider.name|lower %}from-orange-500 to-orange-600
+                                {% else %}from-purple-500 to-purple-600{% endif %}
+                                rounded-lg flex items-center justify-center">
+                                {% if 'openai' in chat_session.api_key.provider.name|lower %}
+                                    <i class="fas fa-brain text-white"></i>
+                                {% elif 'gemini' in chat_session.api_key.provider.name|lower %}
+                                    <i class="fas fa-gem text-white"></i>
+                                {% elif 'groq' in chat_session.api_key.provider.name|lower %}
+                                    <i class="fas fa-bolt text-white"></i>
+                                {% else %}
+                                    <i class="fas fa-robot text-white"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {{ chat_session.title|default:"Untitled Chat" }}
+                                </h1>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ chat_session.api_key.provider.name }} • {{ chat_session.ai_model.name|default:"Default Model" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                        
+                        <button onclick="clearChat()" class="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        
+                        <div class="relative">
+                            <button onclick="toggleMenu()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            
+                            <div id="chatMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                                <a href="#" onclick="exportChat()" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-download mr-2"></i>Export Chat
+                                </a>
+                                <a href="#" onclick="shareChat()" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-share mr-2"></i>Share Chat
+                                </a>
+                                <a href="{% url 'chat_session_delete' chat_session.id %}" class="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <i class="fas fa-trash mr-2"></i>Delete Chat
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                {% for message in messages %}
+                    <div class="message message-{{ message.role }}">
+                        {% if message.role == 'user' %}
+                            <div class="message-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="message-content">
+                                <div class="message-actions">
+                                    <button onclick="copyMessage(this)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                                        <i class="fas fa-copy text-xs"></i>
+                                    </button>
+                                    <button onclick="editMessage({{ message.id }})" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="message-text">{{ message.content|linebreaks }}</div>
+                                
+                                {% if message.attachment %}
+                                    <div class="mt-2">
+                                        {% if message.attachment.file_type == 'image' %}
+                                            <img src="{{ message.attachment.file.url }}" alt="Attachment" class="attachment-preview">
+                                        {% else %}
+                                            <a href="{{ message.attachment.file.url }}" class="text-blue-400 hover:text-blue-300 text-sm">
+                                                <i class="fas fa-paperclip mr-1"></i>{{ message.attachment.file.name }}
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="message-time">{{ message.created_at|date:"H:i" }}</div>
+                            </div>
+                        {% else %}
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <div class="message-actions">
+                                    <button onclick="copyMessage(this)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                                        <i class="fas fa-copy text-xs"></i>
+                                    </button>
+                                    <button onclick="regenerateResponse({{ message.id }})" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                                        <i class="fas fa-redo text-xs"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="message-text">{{ message.content|linebreaks }}</div>
+                                <div class="message-time">{{ message.created_at|date:"H:i" }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="text-center py-16">
+                        <div class="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-comments text-2xl text-gray-400"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Start the conversation</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Send a message to begin chatting with AI</p>
+                    </div>
+                {% endfor %}
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="message-avatar bg-gradient-to-r from-purple-500 to-purple-600">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="text-sm">
+                        AI is typing
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <form id="chatForm" onsubmit="sendMessage(event)" class="flex items-end space-x-3">
+                    {% csrf_token %}
+                    
+                    <div class="flex-1">
+                        <div class="relative">
+                            <textarea id="messageInput" 
+                                     name="content"
+                                     class="chat-input w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                     placeholder="Type your message..."
+                                     rows="1"
+                                     onkeydown="handleKeyDown(event)"
+                                     oninput="autoResize(this)"></textarea>
+                            
+                            <!-- Attachment Button -->
+                            <button type="button" 
+                                    onclick="document.getElementById('attachmentInput').click()"
+                                    class="absolute bottom-3 right-12 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            
+                            <input type="file" 
+                                   id="attachmentInput" 
+                                   name="attachment" 
+                                   class="hidden" 
+                                   accept="image/*,.pdf,.doc,.docx,.txt"
+                                   onchange="handleAttachment(this)">
+                        </div>
+                        
+                        <!-- Attachment Preview -->
+                        <div id="attachmentPreview" class="hidden mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-paperclip text-gray-500"></i>
+                                    <span id="attachmentName" class="text-sm text-gray-700 dark:text-gray-300"></span>
+                                </div>
+                                <button type="button" onclick="removeAttachment()" class="text-red-500 hover:text-red-700">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" 
+                            id="sendButton"
+                            class="send-button btn-primary px-6 py-3 rounded-xl font-medium">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Chat Info</h2>
+                    <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 md:hidden">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Session Details -->
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Session Title</label>
+                        <input type="text" 
+                               value="{{ chat_session.title|default:'Untitled Chat' }}"
+                               onchange="updateSessionTitle(this.value)"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm">
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Provider</label>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ chat_session.api_key.provider.name }}</p>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Model</label>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ chat_session.ai_model.name|default:"Default Model" }}</p>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Created</label>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ chat_session.created_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Messages</label>
+                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ messages|length }} messages</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="space-y-3">
+                    <button onclick="exportChat()" class="w-full btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Chat
+                    </button>
+                    
+                    <button onclick="shareChat()" class="w-full btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-share mr-2"></i>
+                        Share Chat
+                    </button>
+                    
+                    <button onclick="clearChat()" class="w-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-800">
+                        <i class="fas fa-trash mr-2"></i>
+                        Clear Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let isTyping = false;
+    
+    // Send message
+    async function sendMessage(event) {
+        event.preventDefault();
+        
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const content = messageInput.value.trim();
+        
+        if (!content && !document.getElementById('attachmentInput').files[0]) {
+            return;
+        }
+        
+        // Disable input and show loading
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Add user message to chat
+        addMessage('user', content);
+        
+        // Clear input
+        messageInput.value = '';
+        autoResize(messageInput);
+        removeAttachment();
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        try {
+            const formData = new FormData(document.getElementById('chatForm'));
+            
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Add AI response
+                addMessage('assistant', data.response);
+            } else {
+                addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            addMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        } finally {
+            // Re-enable input
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            hideTypingIndicator();
+            messageInput.focus();
+        }
+    }
+    
+    // Add message to chat
+    function addMessage(role, content) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${role}`;
+        
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        
+        if (role === 'user') {
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-actions">
+                        <button onclick="copyMessage(this)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                            <i class="fas fa-copy text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="message-text">${content.replace(/\n/g, '<br>')}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-actions">
+                        <button onclick="copyMessage(this)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1">
+                            <i class="fas fa-copy text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="message-text">${content.replace(/\n/g, '<br>')}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+    
+    // Show/hide typing indicator
+    function showTypingIndicator() {
+        document.getElementById('typingIndicator').style.display = 'flex';
+        scrollToBottom();
+    }
+    
+    function hideTypingIndicator() {
+        document.getElementById('typingIndicator').style.display = 'none';
+    }
+    
+    // Auto-resize textarea
+    function autoResize(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+    
+    // Handle keyboard shortcuts
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage(event);
+        }
+    }
+    
+    // Scroll to bottom
+    function scrollToBottom() {
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Copy message
+    function copyMessage(button) {
+        const messageText = button.closest('.message-content').querySelector('.message-text').textContent;
+        navigator.clipboard.writeText(messageText).then(() => {
+            button.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-copy text-xs"></i>';
+            }, 1000);
+        });
+    }
+    
+    // Handle attachment
+    function handleAttachment(input) {
+        const file = input.files[0];
+        if (file) {
+            document.getElementById('attachmentName').textContent = file.name;
+            document.getElementById('attachmentPreview').classList.remove('hidden');
+        }
+    }
+    
+    function removeAttachment() {
+        document.getElementById('attachmentInput').value = '';
+        document.getElementById('attachmentPreview').classList.add('hidden');
+    }
+    
+    // Toggle sidebar
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('hidden');
+    }
+    
+    // Toggle menu
+    function toggleMenu() {
+        const menu = document.getElementById('chatMenu');
+        menu.classList.toggle('hidden');
+    }
+    
+    // Update session title
+    function updateSessionTitle(title) {
+        // Implement title update functionality
+        console.log('Update title:', title);
+    }
+    
+    // Export chat
+    function exportChat() {
+        // Implement export functionality
+        console.log('Export chat');
+    }
+    
+    // Share chat
+    function shareChat() {
+        // Implement share functionality
+        console.log('Share chat');
+    }
+    
+    // Clear chat
+    function clearChat() {
+        if (confirm('Are you sure you want to clear this chat? This action cannot be undone.')) {
+            // Implement clear functionality
+            console.log('Clear chat');
+        }
+    }
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('chatMenu');
+        const menuButton = event.target.closest('[onclick="toggleMenu()"]');
+        
+        if (!menuButton && !menu.contains(event.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+    
+    // Auto-scroll to bottom on load
+    document.addEventListener('DOMContentLoaded', function() {
+        scrollToBottom();
+        document.getElementById('messageInput').focus();
+    });
+    
+    // Handle mobile sidebar
+    if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.add('hidden');
+    }
+</script>
+{% endblock %}

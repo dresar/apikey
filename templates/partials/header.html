@@ -1,0 +1,243 @@
+<!-- Header Navigation -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <a href="{% url 'home' %}" class="flex items-center space-x-2 group">
+                    <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-robot text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        AI API Platform
+                    </span>
+                </a>
+            </div>
+            
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex items-center space-x-8">
+                <!-- Home -->
+                <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    <i class="fas fa-home mr-2"></i>Home
+                </a>
+                
+                {% if user.is_authenticated %}
+                    <!-- Dashboard -->
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    
+                    <!-- API Keys Dropdown -->
+                    <div class="relative group">
+                        <button class="nav-link flex items-center {% if 'api' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fas fa-key mr-2"></i>API Keys
+                            <i class="fas fa-chevron-down ml-1 text-xs group-hover:rotate-180 transition-transform duration-300"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                            <a href="{% url 'api_key_list' %}" class="dropdown-link">
+                                <i class="fas fa-list mr-2"></i>Manage Keys
+                            </a>
+                            <a href="{% url 'api_key_create' %}" class="dropdown-link">
+                                <i class="fas fa-plus mr-2"></i>Add New Key
+                            </a>
+                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                            <a href="{% url 'bulk_test_api_keys' %}" class="dropdown-link">
+                                <i class="fas fa-vial mr-2"></i>Bulk Test
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Dropdown -->
+                    <div class="relative group">
+                        <button class="nav-link flex items-center {% if 'chat' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fas fa-comments mr-2"></i>Chat
+                            <i class="fas fa-chevron-down ml-1 text-xs group-hover:rotate-180 transition-transform duration-300"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                            <a href="{% url 'chat_sessions' %}" class="dropdown-link">
+                                <i class="fas fa-history mr-2"></i>Chat Sessions
+                            </a>
+                            <a href="{% url 'new_chat_session' %}" class="dropdown-link">
+                                <i class="fas fa-plus mr-2"></i>New Chat
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics -->
+                    <a href="{% url 'analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+                        <i class="fas fa-chart-bar mr-2"></i>Analytics
+                    </a>
+                    
+                    <!-- Error Logs -->
+                    <a href="{% url 'error_logs' %}" class="nav-link {% if request.resolver_match.url_name == 'error_logs' %}active{% endif %}">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Errors
+                        {% if unresolved_errors_count > 0 %}
+                            <span class="ml-1 bg-red-500 text-white text-xs rounded-full px-2 py-1 animate-pulse">{{ unresolved_errors_count }}</span>
+                        {% endif %}
+                    </a>
+                {% endif %}
+            </div>
+            
+            <!-- Right Side Actions -->
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                    <i class="fas fa-moon text-gray-600 dark:text-gray-300"></i>
+                </button>
+                
+                {% if user.is_authenticated %}
+                    <!-- Health Check -->
+                    <a href="{% url 'health_check' %}" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300" title="Health Check">
+                        <i class="fas fa-heartbeat text-gray-600 dark:text-gray-300"></i>
+                    </a>
+                    
+                    <!-- User Dropdown -->
+                    <div class="relative group">
+                        <button class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-300">
+                            {% if google_photo_url %}
+                                <img src="{{ google_photo_url }}" alt="Profile" class="w-8 h-8 rounded-full">
+                            {% else %}
+                                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                            {% endif %}
+                            <span class="hidden sm:block text-sm font-medium">{{ user.username }}</span>
+                            <i class="fas fa-chevron-down text-xs group-hover:rotate-180 transition-transform duration-300"></i>
+                        </button>
+                        <div class="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <p class="text-sm font-medium">{{ user.get_full_name|default:user.username }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
+                            </div>
+                            <a href="{% url 'profile' %}" class="dropdown-link">
+                                <i class="fas fa-user mr-2"></i>Profile
+                            </a>
+                            <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                            <a href="{% url 'logout' %}" class="dropdown-link text-red-600 dark:text-red-400">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <!-- Auth Links -->
+                    <a href="{% url 'login' %}" class="btn-secondary">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Login
+                    </a>
+                    <a href="{% url 'register' %}" class="btn-primary">
+                        <i class="fas fa-user-plus mr-2"></i>Register
+                    </a>
+                {% endif %}
+                
+                <!-- Mobile Menu Toggle -->
+                <button id="mobile-menu-toggle" class="md:hidden p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                    <i class="fas fa-bars text-gray-600 dark:text-gray-300"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="md:hidden mobile-menu fixed top-16 left-0 w-full h-screen bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-40">
+        <div class="px-4 py-6 space-y-4">
+            <!-- Home -->
+            <a href="{% url 'home' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                <i class="fas fa-home mr-3"></i>Home
+            </a>
+            
+            {% if user.is_authenticated %}
+                <!-- Dashboard -->
+                <a href="{% url 'dashboard' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt mr-3"></i>Dashboard
+                </a>
+                
+                <!-- API Keys Section -->
+                <div class="space-y-2">
+                    <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3">API Keys</div>
+                    <a href="{% url 'api_key_list' %}" class="mobile-nav-link pl-6">
+                        <i class="fas fa-list mr-3"></i>Manage Keys
+                    </a>
+                    <a href="{% url 'api_key_create' %}" class="mobile-nav-link pl-6">
+                        <i class="fas fa-plus mr-3"></i>Add New Key
+                    </a>
+                    <a href="{% url 'bulk_test_api_keys' %}" class="mobile-nav-link pl-6">
+                        <i class="fas fa-vial mr-3"></i>Bulk Test
+                    </a>
+                </div>
+                
+                <!-- Chat Section -->
+                <div class="space-y-2">
+                    <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3">Chat</div>
+                    <a href="{% url 'chat_sessions' %}" class="mobile-nav-link pl-6">
+                        <i class="fas fa-history mr-3"></i>Chat Sessions
+                    </a>
+                    <a href="{% url 'new_chat_session' %}" class="mobile-nav-link pl-6">
+                        <i class="fas fa-plus mr-3"></i>New Chat
+                    </a>
+                </div>
+                
+                <!-- Analytics -->
+                <a href="{% url 'analytics' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">
+                    <i class="fas fa-chart-bar mr-3"></i>Analytics
+                </a>
+                
+                <!-- Error Logs -->
+                <a href="{% url 'error_logs' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'error_logs' %}active{% endif %}">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>Error Logs
+                    {% if unresolved_errors_count > 0 %}
+                        <span class="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">{{ unresolved_errors_count }}</span>
+                    {% endif %}
+                </a>
+                
+                <!-- Health Check -->
+                <a href="{% url 'health_check' %}" class="mobile-nav-link">
+                    <i class="fas fa-heartbeat mr-3"></i>Health Check
+                </a>
+                
+                <!-- Profile -->
+                <a href="{% url 'profile' %}" class="mobile-nav-link">
+                    <i class="fas fa-user mr-3"></i>Profile
+                </a>
+                
+                <!-- Logout -->
+                <a href="{% url 'logout' %}" class="mobile-nav-link text-red-600 dark:text-red-400">
+                    <i class="fas fa-sign-out-alt mr-3"></i>Logout
+                </a>
+            {% else %}
+                <!-- Auth Links -->
+                <a href="{% url 'login' %}" class="mobile-nav-link">
+                    <i class="fas fa-sign-in-alt mr-3"></i>Login
+                </a>
+                <a href="{% url 'register' %}" class="mobile-nav-link">
+                    <i class="fas fa-user-plus mr-3"></i>Register
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<style>
+    .nav-link {
+        @apply text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors duration-300 relative;
+    }
+    
+    .nav-link.active {
+        @apply text-blue-600 dark:text-blue-400;
+    }
+    
+    .nav-link.active::after {
+        content: '';
+        @apply absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400;
+    }
+    
+    .dropdown-link {
+        @apply block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300;
+    }
+    
+    .mobile-nav-link {
+        @apply block px-3 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-300 font-medium;
+    }
+    
+    .mobile-nav-link.active {
+        @apply bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400;
+    }
+</style>

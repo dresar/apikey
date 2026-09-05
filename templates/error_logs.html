@@ -1,0 +1,699 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Error Logs - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .error-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .error-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .error-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .error-severity {
+        width: 4px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-radius: 0.5rem 0 0 0.5rem;
+    }
+    
+    .severity-critical {
+        background: linear-gradient(180deg, #DC2626, #B91C1C);
+    }
+    
+    .severity-high {
+        background: linear-gradient(180deg, #EA580C, #C2410C);
+    }
+    
+    .severity-medium {
+        background: linear-gradient(180deg, #D97706, #B45309);
+    }
+    
+    .severity-low {
+        background: linear-gradient(180deg, #65A30D, #4D7C0F);
+    }
+    
+    .error-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        color: white;
+    }
+    
+    .error-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    
+    .error-details.expanded {
+        max-height: 500px;
+    }
+    
+    .code-snippet {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+    }
+    
+    .dark .code-snippet {
+        background: rgba(0, 0, 0, 0.3);
+    }
+    
+    .filter-chip {
+        transition: all 0.2s ease;
+    }
+    
+    .filter-chip.active {
+        background: rgb(59, 130, 246);
+        color: white;
+    }
+    
+    .search-input {
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .error-actions {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .error-card:hover .error-actions {
+        opacity: 1;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .timeline-item::before {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .timeline-dot {
+        position: absolute;
+        left: 0;
+        top: 0.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .dark .timeline-dot {
+        border-color: rgb(31, 41, 55);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .trend-chart {
+        height: 60px;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        <i class="fas fa-exclamation-triangle mr-3 text-red-500"></i>
+                        Error Logs
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        Monitor and resolve API errors and issues
+                    </p>
+                </div>
+                
+                <div class="mt-4 sm:mt-0 flex space-x-3">
+                    <button onclick="bulkResolve()" class="btn-secondary px-4 py-2 rounded-lg text-sm" id="bulkResolveBtn" style="display: none;">
+                        <i class="fas fa-check mr-2"></i>
+                        Mark as Resolved
+                    </button>
+                    <button onclick="exportErrors()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export
+                    </button>
+                    <button onclick="refreshErrors()" class="btn-primary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error Statistics -->
+        <div class="stats-grid mb-8">
+            <div class="error-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="error-icon bg-gradient-to-r from-red-500 to-red-600">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-1 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-full">
+                        +12% today
+                    </span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ total_errors|default:"47" }}</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Total Errors</p>
+                <div class="trend-chart mt-3">
+                    <canvas id="totalErrorsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="error-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="error-icon bg-gradient-to-r from-orange-500 to-orange-600">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400 rounded-full">
+                        Last hour
+                    </span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ recent_errors|default:"8" }}</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Recent Errors</p>
+                <div class="trend-chart mt-3">
+                    <canvas id="recentErrorsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="error-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="error-icon bg-gradient-to-r from-yellow-500 to-yellow-600">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400 rounded-full">
+                        Pending
+                    </span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ unresolved_errors|default:"23" }}</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Unresolved</p>
+                <div class="trend-chart mt-3">
+                    <canvas id="unresolvedErrorsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="error-card rounded-xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="error-icon bg-gradient-to-r from-green-500 to-green-600">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <span class="text-xs font-semibold px-2 py-1 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 rounded-full">
+                        98.2%
+                    </span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ resolution_rate|default:"98.2" }}%</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Resolution Rate</p>
+                <div class="trend-chart mt-3">
+                    <canvas id="resolutionRateChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search and Filters -->
+        <div class="mb-8">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-6">
+                <!-- Search -->
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" 
+                               id="searchInput"
+                               class="search-input block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Search error logs..."
+                               onkeyup="filterErrors()">
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="filterBySeverity('all')" class="filter-chip active px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        All
+                    </button>
+                    <button onclick="filterBySeverity('critical')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Critical
+                    </button>
+                    <button onclick="filterBySeverity('high')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        High
+                    </button>
+                    <button onclick="filterBySeverity('medium')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Medium
+                    </button>
+                    <button onclick="filterByStatus('unresolved')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Unresolved
+                    </button>
+                    <button onclick="filterByStatus('resolved')" class="filter-chip px-4 py-2 text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        Resolved
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error Logs List -->
+        {% if error_logs %}
+            <div class="space-y-4" id="errorsList">
+                {% for error in error_logs %}
+                    <div class="error-card relative rounded-xl p-6 shadow-sm" 
+                         data-error-id="{{ error.id }}"
+                         data-severity="{{ error.severity|default:'medium' }}"
+                         data-status="{{ error.status|default:'unresolved' }}">
+                        
+                        <!-- Severity Indicator -->
+                        <div class="error-severity severity-{{ error.severity|default:'medium' }}"></div>
+                        
+                        <!-- Header -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-start space-x-4 flex-1">
+                                <input type="checkbox" 
+                                       class="error-checkbox mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                                       value="{{ error.id }}"
+                                       onchange="toggleBulkActions()">
+                                
+                                <div class="error-icon bg-gradient-to-r 
+                                    {% if error.severity == 'critical' %}from-red-500 to-red-600
+                                    {% elif error.severity == 'high' %}from-orange-500 to-orange-600
+                                    {% elif error.severity == 'medium' %}from-yellow-500 to-yellow-600
+                                    {% else %}from-green-500 to-green-600{% endif %}">
+                                    {% if error.error_type == 'rate_limit' %}
+                                        <i class="fas fa-tachometer-alt"></i>
+                                    {% elif error.error_type == 'timeout' %}
+                                        <i class="fas fa-clock"></i>
+                                    {% elif error.error_type == 'auth' %}
+                                        <i class="fas fa-key"></i>
+                                    {% elif error.error_type == 'network' %}
+                                        <i class="fas fa-wifi"></i>
+                                    {% else %}
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-3 mb-2">
+                                        <h3 class="font-semibold text-gray-900 dark:text-white">
+                                            {{ error.error_message|default:"API Error" }}
+                                        </h3>
+                                        
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                            {% if error.severity == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                            {% elif error.severity == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                                            {% elif error.severity == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                            {% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
+                                            {{ error.get_severity_display|default:"Medium" }}
+                                        </span>
+                                        
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                            {% if error.is_resolved %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                            {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                                            {% if error.is_resolved %}Resolved{% else %}Unresolved{% endif %}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                                        <span>
+                                            <i class="fas fa-server mr-1"></i>
+                                            {{ error.api_key.provider.name|default:"Unknown Provider" }}
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-clock mr-1"></i>
+                                            {{ error.created_at|timesince }} ago
+                                        </span>
+                                        <span>
+                                            <i class="fas fa-code mr-1"></i>
+                                            {{ error.status_code|default:"500" }}
+                                        </span>
+                                    </div>
+                                    
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                        {{ error.error_details|truncatechars:150|default:"An error occurred while processing the API request." }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="error-actions flex items-center space-x-2">
+                                <button onclick="toggleErrorDetails({{ error.id }})" 
+                                        class="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                
+                                {% if not error.is_resolved %}
+                                    <button onclick="resolveError({{ error.id }})" 
+                                            class="text-gray-400 hover:text-green-500 dark:hover:text-green-400">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                {% endif %}
+                                
+                                <button onclick="deleteError({{ error.id }})" 
+                                        class="text-gray-400 hover:text-red-500 dark:hover:text-red-400">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Expandable Details -->
+                        <div class="error-details" id="errorDetails{{ error.id }}">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <!-- Error Information -->
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-3">Error Information</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Error Type:</span>
+                                                <span class="text-gray-900 dark:text-white">{{ error.get_error_type_display|default:"Unknown" }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Status Code:</span>
+                                                <span class="text-gray-900 dark:text-white">{{ error.status_code|default:"500" }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">API Key:</span>
+                                                <span class="text-gray-900 dark:text-white">{{ error.api_key.key_name|default:"Unknown" }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Timestamp:</span>
+                                                <span class="text-gray-900 dark:text-white">{{ error.created_at|date:"M d, Y H:i:s" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Request Details -->
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-3">Request Details</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Endpoint:</span>
+                                                <span class="text-gray-900 dark:text-white font-mono text-xs">{{ error.endpoint|default:"/api/chat" }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">Method:</span>
+                                                <span class="text-gray-900 dark:text-white">{{ error.method|default:"POST" }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 dark:text-gray-400">User Agent:</span>
+                                                <span class="text-gray-900 dark:text-white text-xs">{{ error.user_agent|truncatechars:30|default:"Unknown" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Error Stack Trace -->
+                                {% if error.stack_trace %}
+                                    <div class="mt-6">
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-3">Stack Trace</h4>
+                                        <div class="code-snippet">
+                                            {{ error.stack_trace|default:"No stack trace available" }}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Resolution Notes -->
+                                {% if error.is_resolved and error.resolution_notes %}
+                                    <div class="mt-6">
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-3">Resolution Notes</h4>
+                                        <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                            <p class="text-sm text-green-800 dark:text-green-200">{{ error.resolution_notes }}</p>
+                                            <p class="text-xs text-green-600 dark:text-green-400 mt-2">
+                                                Resolved on {{ error.resolved_at|date:"M d, Y H:i" }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <div class="mt-8 flex justify-center">
+                    <nav class="flex items-center space-x-2">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" 
+                               class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <span class="px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg">{{ num }}</span>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <a href="?page={{ num }}" 
+                                   class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" 
+                               class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-16">
+                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-check-circle text-4xl text-green-500"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No errors found</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+                    Great! Your API is running smoothly without any errors.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Initialize mini charts
+    function initMiniChart(canvasId, data, color) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['', '', '', '', '', '', ''],
+                datasets: [{
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: { radius: 0 }
+                }
+            }
+        });
+    }
+    
+    // Initialize all mini charts
+    document.addEventListener('DOMContentLoaded', function() {
+        initMiniChart('totalErrorsChart', [10, 15, 12, 18, 22, 19, 25], '#EF4444');
+        initMiniChart('recentErrorsChart', [2, 4, 1, 3, 5, 2, 8], '#F97316');
+        initMiniChart('unresolvedErrorsChart', [30, 28, 25, 23, 20, 18, 23], '#EAB308');
+        initMiniChart('resolutionRateChart', [95, 96, 97, 98, 97, 98, 98.2], '#22C55E');
+    });
+    
+    // Toggle error details
+    function toggleErrorDetails(errorId) {
+        const details = document.getElementById(`errorDetails${errorId}`);
+        const button = event.target;
+        
+        if (details.classList.contains('expanded')) {
+            details.classList.remove('expanded');
+            button.classList.remove('fa-chevron-up');
+            button.classList.add('fa-chevron-down');
+        } else {
+            details.classList.add('expanded');
+            button.classList.remove('fa-chevron-down');
+            button.classList.add('fa-chevron-up');
+        }
+    }
+    
+    // Resolve error
+    function resolveError(errorId) {
+        if (confirm('Mark this error as resolved?')) {
+            // Implement resolve functionality
+            console.log('Resolve error:', errorId);
+        }
+    }
+    
+    // Delete error
+    function deleteError(errorId) {
+        if (confirm('Are you sure you want to delete this error log?')) {
+            // Implement delete functionality
+            console.log('Delete error:', errorId);
+        }
+    }
+    
+    // Filter errors by search
+    function filterErrors() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const errorCards = document.querySelectorAll('.error-card');
+        
+        errorCards.forEach(card => {
+            const errorMessage = card.querySelector('h3').textContent.toLowerCase();
+            const errorDetails = card.querySelector('p').textContent.toLowerCase();
+            
+            if (errorMessage.includes(searchTerm) || errorDetails.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Filter by severity
+    function filterBySeverity(severity) {
+        updateFilterButtons(event.target);
+        
+        const errorCards = document.querySelectorAll('.error-card');
+        errorCards.forEach(card => {
+            if (severity === 'all' || card.dataset.severity === severity) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Filter by status
+    function filterByStatus(status) {
+        updateFilterButtons(event.target);
+        
+        const errorCards = document.querySelectorAll('.error-card');
+        errorCards.forEach(card => {
+            if (card.dataset.status === status) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Update filter button states
+    function updateFilterButtons(activeButton) {
+        document.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        activeButton.classList.add('active');
+    }
+    
+    // Toggle bulk actions
+    function toggleBulkActions() {
+        const checkboxes = document.querySelectorAll('.error-checkbox:checked');
+        const bulkResolveBtn = document.getElementById('bulkResolveBtn');
+        
+        if (checkboxes.length > 0) {
+            bulkResolveBtn.style.display = 'block';
+        } else {
+            bulkResolveBtn.style.display = 'none';
+        }
+    }
+    
+    // Bulk resolve
+    function bulkResolve() {
+        const checkboxes = document.querySelectorAll('.error-checkbox:checked');
+        const errorIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (errorIds.length > 0 && confirm(`Mark ${errorIds.length} errors as resolved?`)) {
+            // Implement bulk resolve functionality
+            console.log('Bulk resolve errors:', errorIds);
+        }
+    }
+    
+    // Export errors
+    function exportErrors() {
+        // Implement export functionality
+        console.log('Export errors');
+    }
+    
+    // Refresh errors
+    function refreshErrors() {
+        location.reload();
+    }
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        // You can implement auto-refresh logic here
+        console.log('Auto-refreshing error logs...');
+    }, 30000);
+</script>
+{% endblock %}

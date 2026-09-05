@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-100 to-indigo-100 dark:from-gray-900 dark:via-purple-900/30 dark:to-gray-800 py-8 relative overflow-hidden">
+    <!-- Animated background shapes -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-48 -left-48 w-96 h-96 bg-purple-500/20 dark:bg-purple-600/20 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+        <div class="absolute top-48 -right-48 w-96 h-96 bg-pink-500/20 dark:bg-pink-600/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-48 left-48 w-96 h-96 bg-indigo-500/20 dark:bg-indigo-600/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+    </div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="glass rounded-2xl p-6 mb-8 animate__animated animate__fadeInDown hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-600/10 dark:to-pink-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl">
+                        <i class="fas fa-user text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                            User Profile
+                        </h1>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Manage your account settings and personal information
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% if google_photo_url %}
+                        <div class="flex items-center space-x-2 px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg">
+                            <i class="fab fa-google text-sm"></i>
+                            <span class="text-sm font-medium">Connected</span>
+                        </div>
+                    {% endif %}
+                    <a href="{% url 'dashboard' %}" class="btn-secondary">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Profile Card -->
+            <div class="lg:col-span-1">
+                <div class="glass rounded-2xl p-6 animate__animated animate__fadeInLeft hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 relative overflow-hidden backdrop-blur-lg">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-600/10 dark:to-pink-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="text-center">
+                        <div class="relative inline-block">
+                            {% if google_photo_url %}
+                                <img src="{{ google_photo_url }}" alt="Profile Photo" 
+                                     class="w-32 h-32 rounded-full object-cover border-4 border-purple-200 dark:border-purple-600 mx-auto mb-4">
+                                <div class="absolute bottom-0 right-0 bg-blue-500 w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                                    <i class="fab fa-google text-white text-xs"></i>
+                                </div>
+                            {% else %}
+                                <div class="w-32 h-32 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    {% if user.first_name %}
+                                        <span class="text-4xl font-bold text-white">
+                                            {{ user.first_name|first }}{{ user.last_name|first }}
+                                        </span>
+                                    {% else %}
+                                        <i class="fas fa-user text-4xl text-white"></i>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if not google_photo_url %}
+                            <div class="text-center mb-4">
+                                <a href="{% url 'social:begin' 'google-oauth2' %}" 
+                                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                    </svg>
+                                    Connect with Google
+                                </a>
+                            </div>
+                        {% endif %}
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                            {% if user.first_name %}
+                                {{ user.first_name }} {{ user.last_name }}
+                            {% else %}
+                                {{ user.username }}
+                            {% endif %}
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ user.email }}</p>
+                        <div class="flex justify-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                            <div class="text-center">
+                                <div class="font-semibold text-gray-900 dark:text-white">{{ user.date_joined|date:"M Y" }}</div>
+                                <div>Joined</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="font-semibold text-gray-900 dark:text-white">{{ user.last_login|date:"M d" }}</div>
+                                <div>Last Login</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="glass rounded-2xl p-6 mt-6 animate__animated animate__fadeInLeft animate__delay-1s hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 relative overflow-hidden backdrop-blur-lg">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-600/10 dark:to-pink-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-chart-bar mr-2"></i>Quick Stats
+                    </h4>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 dark:text-gray-400">API Keys</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ user.apikey_set.count }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 dark:text-gray-400">Chat Sessions</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ user.chatsession_set.count }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 dark:text-gray-400">API Tests</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ user.apitest_set.count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Forms -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Personal Information -->
+                <div class="glass rounded-2xl p-6 animate__animated animate__fadeInRight hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 relative overflow-hidden backdrop-blur-lg">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-600/10 dark:to-pink-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-user-edit mr-2"></i>Personal Information
+                        </h3>
+                        <button onclick="toggleEditMode('personal')" id="editPersonalBtn" class="btn-primary">
+                            <i class="fas fa-edit mr-2"></i>Edit
+                        </button>
+                    </div>
+                    
+                    <form id="personalForm" method="post" action="{% url 'profile' %}">
+                        {% csrf_token %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label for="first_name" class="form-label">
+                                    <i class="fas fa-user mr-2"></i>First Name
+                                </label>
+                                <input type="text" id="first_name" name="first_name" 
+                                       value="{{ user.first_name }}" class="form-input" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label for="last_name" class="form-label">
+                                    <i class="fas fa-user mr-2"></i>Last Name
+                                </label>
+                                <input type="text" id="last_name" name="last_name" 
+                                       value="{{ user.last_name }}" class="form-input" disabled>
+                            </div>
+                            <div class="form-group md:col-span-2">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope mr-2"></i>Email Address
+                                </label>
+                                <input type="email" id="email" name="email" 
+                                       value="{{ user.email }}" class="form-input" disabled>
+                            </div>
+                            <div class="form-group md:col-span-2">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-at mr-2"></i>Username
+                                </label>
+                                <input type="text" id="username" name="username" 
+                                       value="{{ user.username }}" class="form-input" disabled>
+                            </div>
+                        </div>
+                        <div id="personalActions" class="mt-6 hidden">
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="cancelEdit('personal')" class="btn-secondary">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save mr-2"></i>Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="glass rounded-2xl p-6 animate__animated animate__fadeInRight animate__delay-1s hover:shadow-2xl hover:scale-[1.02] transform transition-all duration-300 relative overflow-hidden backdrop-blur-lg">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-600/10 dark:to-pink-600/10 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-shield-alt mr-2"></i>Security Settings
+                        </h3>
+                        <button onclick="openPasswordModal()" class="btn-primary">
+                            <i class="fas fa-key mr-2"></i>Change Password
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-lock text-green-500 mr-3"></i>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Password</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Last changed: {{ user.last_login|date:"M d, Y" }}</div>
+                                </div>
+                            </div>
+                            <span class="text-green-600 dark:text-green-400 text-sm font-medium">Secure</span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-mobile-alt text-blue-500 mr-3"></i>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Two-Factor Authentication</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Add an extra layer of security</div>
+                                </div>
+                            </div>
+                            <button class="btn-secondary text-sm">
+                                Enable
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-history text-purple-500 mr-3"></i>
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Login History</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">View recent login activity</div>
+                                </div>
+                            </div>
+                            <button onclick="openLoginHistoryModal()" class="btn-secondary text-sm">
+                                View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences -->
+                <div class="glass rounded-2xl p-6 animate__animated animate__fadeInRight animate__delay-2s">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-cog mr-2"></i>Preferences
+                    </h3>
+                    
+                    <form id="preferencesForm" method="post" action="{% url 'profile' %}">
+                        {% csrf_token %}
+                        <div class="space-y-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Email Notifications</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Receive email updates about your account</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="email_notifications" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Dark Mode</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Use dark theme for the interface</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="dark_mode" class="sr-only peer" id="darkModeToggle">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">API Usage Alerts</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">Get notified when API usage is high</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="api_alerts" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save mr-2"></i>Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="passwordModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onclick="closePasswordModal()"></div>
+        
+        <!-- This element is to trick the browser into centering the modal contents. -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        
+        <div class="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-key mr-2 text-purple-500"></i>Change Password
+                </h3>
+                <button onclick="closePasswordModal()" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="passwordForm" method="post" action="{% url 'profile' %}">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-lock mr-2 text-gray-500"></i>Current Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="current_password" name="current_password" 
+                                   class="w-full px-4 py-3 pr-12 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" 
+                                   placeholder="Enter current password" required>
+                            <button type="button" onclick="togglePasswordVisibility('current_password', 'current_eye')" 
+                                    class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                                <i id="current_eye" class="fas fa-eye text-gray-400 hover:text-purple-500 transition-colors"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-key mr-2 text-gray-500"></i>New Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="new_password" name="new_password" 
+                                   class="w-full px-4 py-3 pr-12 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" 
+                                   placeholder="Enter new password" required>
+                            <button type="button" onclick="togglePasswordVisibility('new_password', 'new_eye')" 
+                                    class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                                <i id="new_eye" class="fas fa-eye text-gray-400 hover:text-purple-500 transition-colors"></i>
+                            </button>
+                        </div>
+                        <div id="passwordStrength" class="mt-2 text-sm"></div>
+                    </div>
+                    
+                    <div>
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-check mr-2 text-gray-500"></i>Confirm New Password
+                        </label>
+                        <div class="relative">
+                            <input type="password" id="confirm_password" name="confirm_password" 
+                                   class="w-full px-4 py-3 pr-12 text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" 
+                                   placeholder="Confirm new password" required>
+                            <button type="button" onclick="togglePasswordVisibility('confirm_password', 'confirm_eye')" 
+                                    class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                                <i id="confirm_eye" class="fas fa-eye text-gray-400 hover:text-purple-500 transition-colors"></i>
+                            </button>
+                        </div>
+                        <div id="passwordMatch" class="mt-2 text-sm"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-8">
+                    <button type="button" onclick="closePasswordModal()" 
+                            class="px-6 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2.5 text-white bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                        <i class="fas fa-save mr-2"></i>Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Edit mode functions
+    function toggleEditMode(section) {
+        const form = document.getElementById(`${section}Form`);
+        const inputs = form.querySelectorAll('input');
+        const actions = document.getElementById(`${section}Actions`);
+        const editBtn = document.getElementById(`edit${section.charAt(0).toUpperCase() + section.slice(1)}Btn`);
+        
+        const isDisabled = inputs[0].disabled;
+        
+        inputs.forEach(input => {
+            input.disabled = !isDisabled;
+        });
+        
+        if (isDisabled) {
+            actions.classList.remove('hidden');
+            editBtn.innerHTML = '<i class="fas fa-times mr-2"></i>Cancel';
+            editBtn.onclick = () => cancelEdit(section);
+        } else {
+            actions.classList.add('hidden');
+            editBtn.innerHTML = '<i class="fas fa-edit mr-2"></i>Edit';
+            editBtn.onclick = () => toggleEditMode(section);
+        }
+    }
+    
+    function cancelEdit(section) {
+        location.reload();
+    }
+    
+    // Modal functions
+    function openPasswordModal() {
+        document.getElementById('passwordModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closePasswordModal() {
+        document.getElementById('passwordModal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        document.getElementById('passwordForm').reset();
+    }
+    
+    // Password visibility toggle
+    function togglePasswordVisibility(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+    
+    // Password strength checker
+    document.getElementById('new_password').addEventListener('input', function() {
+        const password = this.value;
+        const strengthDiv = document.getElementById('passwordStrength');
+        
+        let strength = 0;
+        let feedback = [];
+        
+        if (password.length >= 8) strength++;
+        else feedback.push('At least 8 characters');
+        
+        if (/[a-z]/.test(password)) strength++;
+        else feedback.push('Lowercase letter');
+        
+        if (/[A-Z]/.test(password)) strength++;
+        else feedback.push('Uppercase letter');
+        
+        if (/[0-9]/.test(password)) strength++;
+        else feedback.push('Number');
+        
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        else feedback.push('Special character');
+        
+        const strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][strength];
+        const strengthColor = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-blue-500', 'text-green-500'][strength];
+        
+        strengthDiv.innerHTML = `
+            <div class="${strengthColor}">Strength: ${strengthText}</div>
+            ${feedback.length > 0 ? `<div class="text-gray-500">Missing: ${feedback.join(', ')}</div>` : ''}
+        `;
+    });
+    
+    // Password match checker
+    document.getElementById('confirm_password').addEventListener('input', function() {
+        const password = document.getElementById('new_password').value;
+        const confirm = this.value;
+        const matchDiv = document.getElementById('passwordMatch');
+        
+        if (confirm === '') {
+            matchDiv.innerHTML = '';
+        } else if (password === confirm) {
+            matchDiv.innerHTML = '<div class="text-green-500"><i class="fas fa-check mr-1"></i>Passwords match</div>';
+        } else {
+            matchDiv.innerHTML = '<div class="text-red-500"><i class="fas fa-times mr-1"></i>Passwords do not match</div>';
+        }
+    });
+    
+    // Dark mode toggle sync
+    document.getElementById('darkModeToggle').addEventListener('change', function() {
+        if (this.checked) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('darkMode', 'true');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('darkMode', 'false');
+        }
+    });
+    
+    // Initialize dark mode state
+    document.addEventListener('DOMContentLoaded', function() {
+        const isDark = localStorage.getItem('darkMode') === 'true' || 
+                      (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.getElementById('darkModeToggle').checked = isDark;
+    });
+    
+    // Close modals with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePasswordModal();
+        }
+    });
+</script>
+{% endblock %}

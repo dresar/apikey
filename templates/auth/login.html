@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - AI API Platform{% endblock %}
+
+{% block content %}
+<!-- Three.js Background Canvas with Enhanced Gradient -->
+<canvas id="login-canvas" class="fixed inset-0 -z-10"></canvas>
+
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/30 to-pink-900/20 animate-gradient-xy"></div>
+    
+    <!-- Animated Background Shapes -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-40 -left-40 w-80 h-80 bg-purple-500/30 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/30 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-40 left-20 w-80 h-80 bg-pink-500/30 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+    </div>
+    
+    <div class="max-w-md w-full space-y-8 relative z-10 transform hover:scale-[1.01] transition-transform duration-300">
+        <!-- Header -->
+        <div class="text-center animate__animated animate__fadeInDown">
+            <div class="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-6">
+                <i class="fas fa-robot text-white text-2xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome Back!
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400">
+                Sign in to your AI API Platform account
+            </p>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="glass rounded-2xl p-8 shadow-2xl animate__animated animate__fadeInUp animate__delay-1s backdrop-blur-lg bg-white/80 dark:bg-gray-900/80 border border-white/20 dark:border-gray-700/20">
+            {% if form.errors %}
+                <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg animate__animated animate__shakeX">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span>Please correct the errors below.</span>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Social Auth Error Messages -->
+            {% if request.GET.error %}
+                <div class="mb-6 p-4 bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg animate__animated animate__shakeX">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        {% if request.GET.error == 'social_auth' %}
+                            <span>Google login failed. Please try again or use regular login.</span>
+                        {% elif request.GET.error == 'backend' %}
+                            <span>Authentication backend error. Please contact support.</span>
+                        {% else %}
+                            <span>Login error occurred. Please try again.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Google OAuth Login -->
+            <div class="mb-6">
+                <a href="{% url 'social:begin' 'google-oauth2' %}" class="w-full flex justify-center items-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                    <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                </a>
+            </div>
+            
+            <!-- Divider -->
+            <div class="relative mb-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-transparent text-gray-500 dark:text-gray-400">Or continue with email</span>
+                </div>
+            </div>
+            
+            <!-- Email/Password Form -->
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div>
+                    <label for="id_username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-user mr-2"></i>Username or Email
+                    </label>
+                    <input type="text" name="username" id="id_username" required 
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white transition-all duration-300 transform focus:scale-105"
+                           placeholder="Enter your username or email"
+                           value="{{ form.username.value|default:'' }}">
+                    {% if form.username.errors %}
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.username.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="id_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <i class="fas fa-lock mr-2"></i>Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" name="password" id="id_password" required 
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white transition-all duration-300 transform focus:scale-105"
+                               placeholder="Enter your password">
+                        <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <i class="fas fa-eye" id="eye-icon"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">
+                            <i class="fas fa-exclamation-circle mr-1"></i>{{ form.password.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="remember-me" name="remember-me" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded">
+                        <label for="remember-me" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Remember me
+                        </label>
+                    </div>
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <button type="submit" 
+                            class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <i class="fas fa-sign-in-alt text-blue-300 group-hover:text-blue-200"></i>
+                        </span>
+                        Sign In
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Divider -->
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or continue with</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Google Login Button -->
+            <div class="mt-6">
+                <a href="{% url 'social:begin' 'google-oauth2' %}" 
+                   class="group relative w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                    </span>
+                    Sign in with Google
+                </a>
+            </div>
+            
+            <!-- Sign Up Link -->
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Don't have an account?
+                    <a href="{% url 'register' %}" class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+                        Sign up here
+                    </a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Enhanced Features Preview -->
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 animate__animated animate__fadeInUp animate__delay-2s">
+            <style>
+                @keyframes float {
+                    0% { transform: translateY(0px); }
+                    50% { transform: translateY(-10px); }
+                    100% { transform: translateY(0px); }
+                }
+                .feature-card {
+                    animation: float 6s ease-in-out infinite;
+                    backdrop-filter: blur(8px);
+                    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    transition: all 0.3s ease;
+                }
+                .feature-card:hover {
+                    transform: translateY(-5px);
+                    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%);
+                    border-color: rgba(255,255,255,0.3);
+                }
+                .dark .feature-card {
+                    background: linear-gradient(135deg, rgba(30,41,59,0.4) 0%, rgba(30,41,59,0.2) 100%);
+                    border-color: rgba(255,255,255,0.1);
+                }
+                .dark .feature-card:hover {
+                    background: linear-gradient(135deg, rgba(30,41,59,0.6) 0%, rgba(30,41,59,0.4) 100%);
+                    border-color: rgba(255,255,255,0.2);
+                }
+            </style>
+            <div class="text-center p-4 feature-card rounded-lg">
+                <i class="fas fa-key text-blue-500 text-2xl mb-2"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Manage API Keys</p>
+            </div>
+            <div class="text-center p-4 glass rounded-lg">
+                <i class="fas fa-comments text-purple-500 text-2xl mb-2"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">AI Chat Interface</p>
+            </div>
+            <div class="text-center p-4 glass rounded-lg">
+                <i class="fas fa-chart-line text-green-500 text-2xl mb-2"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Analytics Dashboard</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Three.js Background Animation
+    const canvas = document.getElementById('login-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // Create particles
+    const particlesGeometry = new THREE.BufferGeometry();
+    const particlesCount = 1500;
+    const posArray = new Float32Array(particlesCount * 3);
+
+    for(let i = 0; i < particlesCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 5;
+    }
+
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+    const particlesMaterial = new THREE.PointsMaterial({
+        size: 0.005,
+        color: '#ffffff',
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+    });
+
+    const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+    scene.add(particlesMesh);
+
+    camera.position.z = 2;
+
+    // Mouse movement effect
+    let mouseX = 0;
+    let mouseY = 0;
+
+    document.addEventListener('mousemove', (event) => {
+        mouseX = event.clientX / window.innerWidth - 0.5;
+        mouseY = event.clientY / window.innerHeight - 0.5;
+    });
+
+    // Animation
+    function animate() {
+        requestAnimationFrame(animate);
+
+        particlesMesh.rotation.y += 0.001;
+        particlesMesh.rotation.x += 0.001;
+
+        // Responsive to mouse movement
+        particlesMesh.rotation.y += mouseX * 0.05;
+        particlesMesh.rotation.x += mouseY * 0.05;
+
+        renderer.render(scene, camera);
+    }
+
+    // Handle resize
+    function handleResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    animate();
+
+    // Password toggle functionality
+    const togglePassword = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('id_password');
+    const eyeIcon = document.getElementById('eye-icon');
+    
+    togglePassword?.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        if (type === 'password') {
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        } else {
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        }
+    });
+    
+    // CSS-based floating animation for background
+    function initFloatingShapes() {
+        const canvas = document.getElementById('login-canvas');
+        if (!canvas) return;
+        
+        // Create floating shapes with CSS animations
+        const shapesContainer = document.createElement('div');
+        shapesContainer.className = 'floating-shapes';
+        shapesContainer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        `;
+        
+        const shapes = ['circle', 'square', 'triangle'];
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981'];
+        
+        for (let i = 0; i < 15; i++) {
+            const shape = document.createElement('div');
+            const shapeType = shapes[Math.floor(Math.random() * shapes.length)];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = Math.random() * 60 + 20;
+            const duration = Math.random() * 20 + 10;
+            const delay = Math.random() * 5;
+            
+            shape.className = `floating-shape ${shapeType}`;
+            shape.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background: ${color};
+                opacity: 0.1;
+                left: ${Math.random() * 100}%;
+                top: ${Math.random() * 100}%;
+                animation: float ${duration}s ease-in-out infinite ${delay}s;
+            `;
+            
+            if (shapeType === 'circle') {
+                shape.style.borderRadius = '50%';
+            } else if (shapeType === 'triangle') {
+                shape.style.background = 'transparent';
+                shape.style.borderLeft = `${size/2}px solid transparent`;
+                shape.style.borderRight = `${size/2}px solid transparent`;
+                shape.style.borderBottom = `${size}px solid ${color}`;
+                shape.style.width = '0';
+                shape.style.height = '0';
+            }
+            
+            shapesContainer.appendChild(shape);
+        }
+        
+        document.body.appendChild(shapesContainer);
+        canvas.style.display = 'none'; // Hide the canvas since we're not using Three.js
+    }
+    
+    // Initialize floating shapes animation
+    document.addEventListener('DOMContentLoaded', initFloatingShapes);
+    
+    // Form validation and enhancement
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input[type="text"], input[type="password"]');
+    
+    // Add floating label effect
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            input.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', () => {
+            if (!input.value) {
+                input.parentElement.classList.remove('focused');
+            }
+        });
+        
+        // Check if input has value on load
+        if (input.value) {
+            input.parentElement.classList.add('focused');
+        }
+    });
+    
+    // Form submission with loading state
+    form.addEventListener('submit', (e) => {
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+        
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing In...';
+        submitButton.disabled = true;
+        
+        // Re-enable button after 5 seconds (in case of error)
+        setTimeout(() => {
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        }, 5000);
+    });
+    
+    // Add ripple effect to buttons
+    const buttons = document.querySelectorAll('button, .btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            ripple.classList.add('ripple');
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+</script>
+
+<style>
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(0);
+        animation: ripple-animation 0.6s linear;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple-animation {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+        25% {
+            transform: translateY(-20px) rotate(90deg);
+        }
+        50% {
+            transform: translateY(-10px) rotate(180deg);
+        }
+        75% {
+            transform: translateY(-30px) rotate(270deg);
+        }
+    }
+    
+    .focused label {
+        transform: translateY(-1.5rem) scale(0.9);
+        color: #3b82f6;
+    }
+</style>
+{% endblock %}

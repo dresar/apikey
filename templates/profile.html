@@ -1,0 +1,854 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile - AI API Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-card {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .profile-card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .profile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .profile-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .avatar-upload {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .avatar-upload input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .avatar-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .avatar-upload:hover .avatar-overlay {
+        opacity: 1;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .stat-card {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+    }
+    
+    .activity-item {
+        transition: all 0.2s ease;
+    }
+    
+    .activity-item:hover {
+        background: rgba(59, 130, 246, 0.05);
+        border-radius: 0.5rem;
+    }
+    
+    .dark .activity-item:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .progress-ring {
+        transform: rotate(-90deg);
+    }
+    
+    .progress-ring-circle {
+        transition: stroke-dashoffset 0.35s;
+        transform-origin: 50% 50%;
+    }
+    
+    .form-input {
+        transition: all 0.3s ease;
+    }
+    
+    .form-input:focus {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .tab-button {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    
+    .tab-button.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #3B82F6, #8B5CF6);
+        border-radius: 1px;
+    }
+    
+    .security-item {
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+    }
+    
+    .security-item.secure {
+        border-left-color: #10B981;
+        background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .security-item.warning {
+        border-left-color: #F59E0B;
+        background: rgba(245, 158, 11, 0.05);
+    }
+    
+    .security-item.danger {
+        border-left-color: #EF4444;
+        background: rgba(239, 68, 68, 0.05);
+    }
+    
+    .notification-item {
+        transition: all 0.2s ease;
+    }
+    
+    .notification-item:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+    
+    .dark .notification-item:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center space-x-4">
+                <button onclick="history.back()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                        <i class="fas fa-user-circle mr-3 text-blue-500"></i>
+                        Profile Settings
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-1">
+                        Manage your account settings and preferences
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Overview -->
+        <div class="profile-card rounded-xl p-6 shadow-sm mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="flex items-center space-x-6">
+                    <!-- Avatar -->
+                    <div class="avatar-upload">
+                        <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=3B82F6&color=fff&size=128{% endif %}" 
+                             alt="Profile Avatar" 
+                             class="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg">
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <input type="file" accept="image/*" onchange="uploadAvatar(this)">
+                    </div>
+                    
+                    <!-- User Info -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            {{ user.get_full_name|default:user.username }}
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">{{ user.email }}</p>
+                        <div class="flex items-center space-x-4 mt-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Active
+                            </span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                Member since {{ user.date_joined|date:"M Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mt-6 md:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button onclick="showTab('security')" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Security
+                    </button>
+                    <button onclick="exportData()" class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8 stats-grid">
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">API Keys</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ user.apikey_set.count|default:"5" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-key text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Usage</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_usage|default:"1,234" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-green-600 dark:text-green-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Chat Sessions</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ user.chatsession_set.count|default:"89" }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-purple-600 dark:text-purple-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card rounded-xl p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">98.5%</p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-check-circle text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="mb-8">
+            <div class="border-b border-gray-200 dark:border-gray-700">
+                <nav class="-mb-px flex space-x-8">
+                    <button onclick="showTab('general')" class="tab-button active py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        General
+                    </button>
+                    <button onclick="showTab('security')" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        Security
+                    </button>
+                    <button onclick="showTab('notifications')" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        Notifications
+                    </button>
+                    <button onclick="showTab('activity')" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        Activity
+                    </button>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Tab Content -->
+        <div class="profile-grid grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- General Tab -->
+            <div id="generalTab" class="tab-content lg:col-span-2">
+                <div class="profile-card rounded-xl p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-user mr-2 text-blue-500"></i>
+                        Personal Information
+                    </h3>
+                    
+                    <form onsubmit="updateProfile(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    First Name
+                                </label>
+                                <input type="text" 
+                                       value="{{ user.first_name }}"
+                                       class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Last Name
+                                </label>
+                                <input type="text" 
+                                       value="{{ user.last_name }}"
+                                       class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Email Address
+                                </label>
+                                <input type="email" 
+                                       value="{{ user.email }}"
+                                       class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Bio
+                                </label>
+                                <textarea rows="3" 
+                                          class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          placeholder="Tell us about yourself...">{{ user.profile.bio|default:"" }}</textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Timezone
+                                </label>
+                                <select class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                    <option value="Asia/Jakarta" selected>Jakarta Time</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Language
+                                </label>
+                                <select class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="en">English</option>
+                                    <option value="id" selected>Bahasa Indonesia</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                    <option value="de">Deutsch</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button type="button" class="btn-secondary px-4 py-2 rounded-lg">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                                <i class="fas fa-save mr-2"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Security Tab -->
+            <div id="securityTab" class="tab-content lg:col-span-2" style="display: none;">
+                <div class="space-y-6">
+                    <!-- Change Password -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                            <i class="fas fa-lock mr-2 text-blue-500"></i>
+                            Change Password
+                        </h3>
+                        
+                        <form onsubmit="changePassword(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Current Password
+                                    </label>
+                                    <input type="password" 
+                                           class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        New Password
+                                    </label>
+                                    <input type="password" 
+                                           id="newPassword"
+                                           class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                           onkeyup="checkPasswordStrength()">
+                                    <div class="mt-2">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                <div id="passwordStrength" class="h-2 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                                            </div>
+                                            <span id="passwordStrengthText" class="text-xs text-gray-500 dark:text-gray-400">Weak</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Confirm New Password
+                                    </label>
+                                    <input type="password" 
+                                           class="form-input w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                                    <i class="fas fa-key mr-2"></i>
+                                    Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Two-Factor Authentication -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                            <i class="fas fa-shield-alt mr-2 text-blue-500"></i>
+                            Two-Factor Authentication
+                        </h3>
+                        
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white">Authenticator App</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Use an authenticator app to generate verification codes</p>
+                            </div>
+                            <button onclick="toggle2FA()" class="btn-primary px-4 py-2 rounded-lg text-sm">
+                                Enable
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Active Sessions -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                            <i class="fas fa-desktop mr-2 text-blue-500"></i>
+                            Active Sessions
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-desktop text-green-600 dark:text-green-400"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white">Current Session</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Windows • Chrome • Jakarta, Indonesia</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-green-600 dark:text-green-400 font-medium">Active</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-mobile-alt text-blue-600 dark:text-blue-400"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 dark:text-white">Mobile Device</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">iOS • Safari • 2 hours ago</p>
+                                    </div>
+                                </div>
+                                <button class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm">
+                                    Revoke
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications Tab -->
+            <div id="notificationsTab" class="tab-content lg:col-span-2" style="display: none;">
+                <div class="profile-card rounded-xl p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-bell mr-2 text-blue-500"></i>
+                        Notification Preferences
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <div class="notification-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Email Notifications</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Receive notifications via email</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">API Key Alerts</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Get notified about API key issues</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Usage Alerts</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Notify when usage limits are reached</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-item p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">Security Alerts</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">Important security notifications</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-end">
+                        <button class="btn-primary px-4 py-2 rounded-lg">
+                            <i class="fas fa-save mr-2"></i>
+                            Save Preferences
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Tab -->
+            <div id="activityTab" class="tab-content lg:col-span-2" style="display: none;">
+                <div class="profile-card rounded-xl p-6 shadow-sm">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-history mr-2 text-blue-500"></i>
+                        Recent Activity
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="activity-item p-4 flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-key text-blue-600 dark:text-blue-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 dark:text-white">API Key Created</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Created new OpenAI API key "Production Key"</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">2 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-item p-4 flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-comments text-green-600 dark:text-green-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 dark:text-white">Chat Session Started</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Started new chat session with GPT-4</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">5 hours ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-item p-4 flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 dark:text-white">API Error Resolved</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Resolved rate limit error for Gemini API</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">1 day ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-item p-4 flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-user text-purple-600 dark:text-purple-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 dark:text-white">Profile Updated</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Updated profile information and preferences</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">3 days ago</p>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-item p-4 flex items-start space-x-4">
+                            <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-sign-in-alt text-red-600 dark:text-red-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 dark:text-white">Login from New Device</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Logged in from iPhone • Safari</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">1 week ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 text-center">
+                        <button class="btn-secondary px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-history mr-2"></i>
+                            View Full Activity Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="space-y-6">
+                    <!-- Security Status -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-shield-alt mr-2 text-blue-500"></i>
+                            Security Status
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="security-item secure p-3 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm text-gray-900 dark:text-white">Strong Password</span>
+                                </div>
+                            </div>
+                            
+                            <div class="security-item warning p-3 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                                    <span class="text-sm text-gray-900 dark:text-white">2FA Disabled</span>
+                                </div>
+                            </div>
+                            
+                            <div class="security-item secure p-3 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-check-circle text-green-500"></i>
+                                    <span class="text-sm text-gray-900 dark:text-white">Email Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Security Score</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">75%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-chart-pie mr-2 text-blue-500"></i>
+                            Usage Summary
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">This Month</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">1,234 requests</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Success Rate</span>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400">98.5%</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Avg Response</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">1.2s</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Cost Saved</span>
+                                <span class="text-sm font-medium text-blue-600 dark:text-blue-400">$45.67</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Account Actions -->
+                    <div class="profile-card rounded-xl p-6 shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            <i class="fas fa-cog mr-2 text-blue-500"></i>
+                            Account Actions
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <button onclick="exportData()" class="w-full btn-secondary px-4 py-2 rounded-lg text-sm text-left">
+                                <i class="fas fa-download mr-2"></i>
+                                Export My Data
+                            </button>
+                            
+                            <button onclick="deactivateAccount()" class="w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg text-sm text-left transition-colors">
+                                <i class="fas fa-user-times mr-2"></i>
+                                Deactivate Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tab switching
+    function showTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.style.display = 'none';
+        });
+        
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Show selected tab
+        document.getElementById(tabName + 'Tab').style.display = 'block';
+        
+        // Add active class to clicked button
+        event.target.classList.add('active');
+    }
+    
+    // Upload avatar
+    function uploadAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = input.parentElement.querySelector('img');
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    // Update profile
+    function updateProfile(event) {
+        event.preventDefault();
+        // Implement profile update logic
+        alert('Profile updated successfully!');
+    }
+    
+    // Change password
+    function changePassword(event) {
+        event.preventDefault();
+        // Implement password change logic
+        alert('Password changed successfully!');
+    }
+    
+    // Check password strength
+    function checkPasswordStrength() {
+        const password = document.getElementById('newPassword').value;
+        const strengthBar = document.getElementById('passwordStrength');
+        const strengthText = document.getElementById('passwordStrengthText');
+        
+        let strength = 0;
+        let text = 'Weak';
+        let color = '#EF4444';
+        
+        if (password.length >= 8) strength += 25;
+        if (/[a-z]/.test(password)) strength += 25;
+        if (/[A-Z]/.test(password)) strength += 25;
+        if (/[0-9]/.test(password)) strength += 25;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+        
+        if (strength >= 75) {
+            text = 'Strong';
+            color = '#10B981';
+        } else if (strength >= 50) {
+            text = 'Medium';
+            color = '#F59E0B';
+        }
+        
+        strengthBar.style.width = Math.min(strength, 100) + '%';
+        strengthBar.style.backgroundColor = color;
+        strengthText.textContent = text;
+        strengthText.style.color = color;
+    }
+    
+    // Toggle 2FA
+    function toggle2FA() {
+        // Implement 2FA toggle logic
+        alert('2FA setup initiated!');
+    }
+    
+    // Export data
+    function exportData() {
+        // Implement data export logic
+        alert('Data export initiated!');
+    }
+    
+    // Deactivate account
+    function deactivateAccount() {
+        if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
+            // Implement account deactivation logic
+            alert('Account deactivation initiated!');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        Edit API Key - AI API Platform
+    {% else %}
+        Add New API Key - AI API Platform
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .dark .form-container {
+        background: rgba(31, 41, 55, 0.95);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .provider-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .provider-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .provider-card.selected {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .provider-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .openai { background: linear-gradient(135deg, #10a37f, #1a7f64); }
+    .gemini { background: linear-gradient(135deg, #4285f4, #34a853); }
+    .groq { background: linear-gradient(135deg, #ff6b35, #f7931e); }
+    .anthropic { background: linear-gradient(135deg, #d4a574, #b8956a); }
+    .cohere { background: linear-gradient(135deg, #39c5bb, #2d9cdb); }
+    .default { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    
+    .key-strength {
+        height: 4px;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .strength-weak { background: #ef4444; width: 25%; }
+    .strength-fair { background: #f59e0b; width: 50%; }
+    .strength-good { background: #10b981; width: 75%; }
+    .strength-strong { background: #059669; width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center space-x-4 mb-4">
+                <a href="{% url 'api_key_list' %}" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                        {% if form.instance.pk %}
+                            <i class="fas fa-edit mr-3 text-blue-500"></i>
+                            Edit API Key
+                        {% else %}
+                            <i class="fas fa-plus mr-3 text-green-500"></i>
+                            Add New API Key
+                        {% endif %}
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        {% if form.instance.pk %}
+                            Update your API key information and settings
+                        {% else %}
+                            Add a new API key from your preferred AI provider
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+            
+            <!-- Provider Selection -->
+            {% if not form.instance.pk %}
+                <div class="form-container rounded-xl p-6 shadow-sm">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        <i class="fas fa-server mr-2 text-blue-500"></i>
+                        Select AI Provider
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for provider in providers %}
+                            <div class="provider-card border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-800" 
+                                 onclick="selectProvider({{ provider.id }}, '{{ provider.name }}')">
+                                <div class="flex items-center space-x-4">
+                                    <div class="provider-icon {{ provider.name|lower|default:'default' }}">
+                                        {% if 'openai' in provider.name|lower %}
+                                            <i class="fas fa-brain"></i>
+                                        {% elif 'gemini' in provider.name|lower %}
+                                            <i class="fas fa-gem"></i>
+                                        {% elif 'groq' in provider.name|lower %}
+                                            <i class="fas fa-bolt"></i>
+                                        {% elif 'anthropic' in provider.name|lower %}
+                                            <i class="fas fa-robot"></i>
+                                        {% elif 'cohere' in provider.name|lower %}
+                                            <i class="fas fa-comments"></i>
+                                        {% else %}
+                                            <i class="fas fa-cog"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-900 dark:text-white">{{ provider.name }}</h3>
+                                        {% if provider.description %}
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ provider.description|truncatewords:8 }}</p>
+                                        {% endif %}
+                                        {% if provider.website %}
+                                            <a href="{{ provider.website }}" target="_blank" class="text-xs text-blue-500 hover:text-blue-600">
+                                                <i class="fas fa-external-link-alt mr-1"></i>Visit Website
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <input type="radio" name="provider" value="{{ provider.id }}" class="hidden" id="provider_{{ provider.id }}">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if form.provider.errors %}
+                        <div class="mt-2 text-red-600 dark:text-red-400 text-sm">
+                            {{ form.provider.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- API Key Details -->
+            <div class="form-container rounded-xl p-6 shadow-sm">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-key mr-2 text-green-500"></i>
+                    API Key Details
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Key Name -->
+                    <div class="md:col-span-2">
+                        <label for="{{ form.key_name.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Key Name *
+                        </label>
+                        {{ form.key_name }}
+                        {% if form.key_name.errors %}
+                            <div class="mt-1 text-red-600 dark:text-red-400 text-sm">
+                                {{ form.key_name.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Give your API key a memorable name (e.g., "Production GPT-4", "Development Gemini")
+                        </p>
+                    </div>
+                    
+                    <!-- API Key Value -->
+                    <div class="md:col-span-2">
+                        <label for="{{ form.key_value.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            API Key *
+                        </label>
+                        <div class="relative">
+                            {{ form.key_value }}
+                            <button type="button" onclick="toggleKeyVisibility()" 
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <i class="fas fa-eye" id="keyVisibilityIcon"></i>
+                            </button>
+                        </div>
+                        {% if form.key_value.errors %}
+                            <div class="mt-1 text-red-600 dark:text-red-400 text-sm">
+                                {{ form.key_value.errors.0 }}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Key Strength Indicator -->
+                        <div class="mt-2">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-500 dark:text-gray-400">Key Strength:</span>
+                                <span id="keyStrengthText" class="font-medium">Enter key to check</span>
+                            </div>
+                            <div class="mt-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+                                <div id="keyStrengthBar" class="key-strength"></div>
+                            </div>
+                        </div>
+                        
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Enter your API key from the provider. This will be encrypted and stored securely.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Settings -->
+            <div class="form-container rounded-xl p-6 shadow-sm">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    <i class="fas fa-cog mr-2 text-purple-500"></i>
+                    Additional Settings
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Notes -->
+                    <div>
+                        <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Notes (Optional)
+                        </label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="mt-1 text-red-600 dark:text-red-400 text-sm">
+                                {{ form.notes.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Add any notes about this API key (usage purpose, limitations, etc.)
+                        </p>
+                    </div>
+                    
+                    <!-- Test on Save -->
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" id="testOnSave" name="test_on_save" 
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <label for="testOnSave" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Test API key after saving
+                        </label>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 ml-7">
+                        Automatically test the API key to verify it's working correctly
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+                <div class="flex space-x-4">
+                    <button type="submit" class="btn-primary px-8 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if form.instance.pk %}Update{% else %}Save{% endif %} API Key
+                    </button>
+                    
+                    <a href="{% url 'api_key_list' %}" class="btn-secondary px-8 py-3 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancel
+                    </a>
+                </div>
+                
+                {% if form.instance.pk %}
+                    <div class="flex space-x-2">
+                        <a href="{% url 'test_api_key' form.instance.pk %}" class="bg-green-50 dark:bg-green-900 text-green-600 dark:text-green-400 px-6 py-3 rounded-lg font-medium hover:bg-green-100 dark:hover:bg-green-800 transition-colors duration-200">
+                            <i class="fas fa-vial mr-2"></i>
+                            Test Key
+                        </a>
+                        
+                        <a href="{% url 'api_key_delete' form.instance.pk %}" class="bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 px-6 py-3 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-800 transition-colors duration-200">
+                            <i class="fas fa-trash mr-2"></i>
+                            Delete
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </form>
+        
+        <!-- Help Section -->
+        <div class="mt-8 bg-blue-50 dark:bg-blue-900 rounded-xl p-6">
+            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>
+                Need Help?
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800 dark:text-blue-200">
+                <div>
+                    <h4 class="font-medium mb-2">Where to find API keys:</h4>
+                    <ul class="space-y-1">
+                        <li>• <strong>OpenAI:</strong> platform.openai.com → API Keys</li>
+                        <li>• <strong>Google AI:</strong> makersuite.google.com → Get API Key</li>
+                        <li>• <strong>Groq:</strong> console.groq.com → API Keys</li>
+                        <li>• <strong>Anthropic:</strong> console.anthropic.com → API Keys</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-medium mb-2">Security Tips:</h4>
+                    <ul class="space-y-1">
+                        <li>• Never share your API keys publicly</li>
+                        <li>• Use different keys for development and production</li>
+                        <li>• Regularly rotate your API keys</li>
+                        <li>• Monitor usage and set billing limits</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Provider selection
+    function selectProvider(providerId, providerName) {
+        // Remove previous selection
+        document.querySelectorAll('.provider-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Select current provider
+        event.currentTarget.classList.add('selected');
+        document.getElementById(`provider_${providerId}`).checked = true;
+        
+        // Update form field if it exists
+        const providerField = document.querySelector('select[name="provider"]');
+        if (providerField) {
+            providerField.value = providerId;
+        }
+    }
+    
+    // Toggle API key visibility
+    function toggleKeyVisibility() {
+        const keyField = document.querySelector('input[name="key_value"]');
+        const icon = document.getElementById('keyVisibilityIcon');
+        
+        if (keyField.type === 'password') {
+            keyField.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            keyField.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+    
+    // Check API key strength
+    function checkKeyStrength(key) {
+        const strengthBar = document.getElementById('keyStrengthBar');
+        const strengthText = document.getElementById('keyStrengthText');
+        
+        if (!key || key.length < 10) {
+            strengthBar.className = 'key-strength';
+            strengthText.textContent = 'Too short';
+            strengthText.className = 'font-medium text-red-500';
+            return;
+        }
+        
+        let score = 0;
+        
+        // Length check
+        if (key.length >= 20) score += 1;
+        if (key.length >= 40) score += 1;
+        
+        // Character variety
+        if (/[a-z]/.test(key)) score += 1;
+        if (/[A-Z]/.test(key)) score += 1;
+        if (/[0-9]/.test(key)) score += 1;
+        if (/[^a-zA-Z0-9]/.test(key)) score += 1;
+        
+        // Common patterns
+        if (key.startsWith('sk-') || key.startsWith('gsk_') || key.includes('AIza')) score += 1;
+        
+        if (score <= 2) {
+            strengthBar.className = 'key-strength strength-weak';
+            strengthText.textContent = 'Weak';
+            strengthText.className = 'font-medium text-red-500';
+        } else if (score <= 4) {
+            strengthBar.className = 'key-strength strength-fair';
+            strengthText.textContent = 'Fair';
+            strengthText.className = 'font-medium text-yellow-500';
+        } else if (score <= 6) {
+            strengthBar.className = 'key-strength strength-good';
+            strengthText.textContent = 'Good';
+            strengthText.className = 'font-medium text-green-500';
+        } else {
+            strengthBar.className = 'key-strength strength-strong';
+            strengthText.textContent = 'Strong';
+            strengthText.className = 'font-medium text-green-600';
+        }
+    }
+    
+    // Add event listener for key strength checking
+    document.addEventListener('DOMContentLoaded', function() {
+        const keyField = document.querySelector('input[name="key_value"]');
+        if (keyField) {
+            keyField.addEventListener('input', function() {
+                checkKeyStrength(this.value);
+            });
+            
+            // Check initial value
+            if (keyField.value) {
+                checkKeyStrength(keyField.value);
+            }
+        }
+        
+        // Pre-select provider if editing
+        {% if form.instance.pk and form.instance.provider %}
+            const providerCard = document.querySelector(`input[value="{{ form.instance.provider.id }}"]`);
+            if (providerCard) {
+                providerCard.closest('.provider-card').classList.add('selected');
+                providerCard.checked = true;
+            }
+        {% endif %}
+    });
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const keyValue = document.querySelector('input[name="key_value"]').value;
+        const keyName = document.querySelector('input[name="key_name"]').value;
+        const provider = document.querySelector('input[name="provider"]:checked') || document.querySelector('select[name="provider"]');
+        
+        if (!keyValue.trim()) {
+            e.preventDefault();
+            alert('Please enter an API key');
+            return;
+        }
+        
+        if (!keyName.trim()) {
+            e.preventDefault();
+            alert('Please enter a key name');
+            return;
+        }
+        
+        if (!provider || !provider.value) {
+            e.preventDefault();
+            alert('Please select a provider');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        submitBtn.disabled = true;
+        
+        // Re-enable button after 10 seconds as fallback
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 10000);
+    });
+</script>
+{% endblock %}
